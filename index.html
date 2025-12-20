@@ -4,9 +4,11 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dart Übersicht</title>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
   <style>
     :root{
       color-scheme: light dark;
@@ -57,6 +59,7 @@
       transition: transform .15s ease, filter .15s ease;
     }
     button:hover{ transform: translateY(-1px); filter: brightness(1.02); }
+    button[disabled]{ opacity:.45; cursor:not-allowed; transform:none; filter:none; }
 
     .ghost-btn{
       background: rgba(255,255,255,0.05);
@@ -73,6 +76,7 @@
       background: rgba(255,209,102,0.12);
       transform: translateY(-1px);
     }
+    .ghost-btn[disabled]{ opacity:.35; cursor:not-allowed; transform:none; }
     .danger{
       border-color:#ef4444;
       color:#ef4444;
@@ -183,12 +187,7 @@
       transition: all .15s ease;
     }
     .num-btn:hover{ border-color: var(--accent); transform: translateY(-1px); }
-    .num-btn.active{
-      background: rgba(255,209,102,0.18);
-      border-color: var(--accent);
-    }
 
-    .throw-controls{ display:grid; gap:10px; align-items:center; }
     .multis{ display:flex; gap:8px; flex-wrap:wrap; }
     .chip-btn{
       background: rgba(255,255,255,0.05);
@@ -200,12 +199,11 @@
       font-weight: 700;
       transition: all .15s ease;
     }
-     .chip-btn:hover{ border-color: var(--accent); transform: translateY(-1px); }
-     .chip-btn.active{
-       border-color: var(--accent);
-       background: rgba(255,209,102,0.16);
-     }
-     .chip-btn[disabled]{ opacity:.35; cursor:not-allowed; transform:none; }
+    .chip-btn:hover{ border-color: var(--accent); transform: translateY(-1px); }
+    .chip-btn.active{
+      border-color: var(--accent);
+      background: rgba(255,209,102,0.16);
+    }
 
     .muted{ color:var(--muted); }
     .current-selection{ color:var(--muted); font-size:14px; }
@@ -284,12 +282,13 @@
     }
   </style>
 </head>
+
 <body>
   <main class="page">
     <header>
       <div>
-        <h1>Dart Start — schnelle Übersicht</h1>
-        <p class="tagline">Schnelle Erfassung von Würfen, Punkten & Regeln</p>
+        <h1>Doppel-Dart</h1>
+        <p class="tagline">Schnelle Erfassung von Würfen & Punkten</p>
       </div>
     </header>
 
@@ -297,12 +296,13 @@
       <div class="score-header">
         <div>
           <h3 style="margin:0;">Spieler & Spiel</h3>
-          <p class="tagline" style="margin-top:4px;">Bis zu 10 Spieler. Modus wählen, Spieler hinzufügen, dann „Spiel starten“.</p>
+          <p class="tagline" style="margin-top:4px;">Bis zu 10 Spieler. Modus wählen, Spieler hinzufügen — auch während das Spiel läuft.</p>
           <p class="muted" id="modeInfo" style="margin:6px 0 0;">Modus: 501 (Double-Out)</p>
           <div class="mode-actions">
             <button type="button" class="ghost-btn" id="startGameBtn">Spiel starten</button>
             <button type="button" class="ghost-btn" id="nextRoundBtn">Neue Runde</button>
             <button type="button" class="ghost-btn danger" id="resetAllBtn">Alles zurücksetzen</button>
+            <button type="button" class="ghost-btn" id="clearLocalBtn">Lokale Statistik löschen</button>
           </div>
         </div>
 
@@ -323,12 +323,12 @@
         <table aria-label="Spieler Tabelle">
           <thead>
             <tr>
-             <th>Name</th>
-             <th>Sets</th>
-             <th>Legs</th>
-             <th>Status</th>
-             <th>Ø</th>
-             <th>Reset/Entfernen</th>
+              <th>Name</th>
+              <th>Sets</th>
+              <th>Legs</th>
+              <th>Status</th>
+              <th>Ø</th>
+              <th>Reset/Entfernen</th>
             </tr>
           </thead>
           <tbody id="playerBody">
@@ -369,16 +369,6 @@
     </section>
 
     <section class="panel">
-      <h3 style="margin:0 0 10px;">Häufige Dart-Regeln</h3>
-      <div style="display:grid; gap:8px; color:var(--muted); font-size:15px; line-height:1.6;">
-        <div><strong style="color:var(--text);">Abstand & Höhe:</strong> Oche 2,37 m zum Board, Bullseye auf 1,73 m Höhe.</div>
-        <div><strong style="color:var(--text);">Wurf:</strong> 3 Darts pro Aufnahme; Oche übertreten = Fehlwurf.</div>
-        <div><strong style="color:var(--text);">Scoring:</strong> Single/Double/Triple; Bull 25, Doppel-Bull 50.</div>
-        <div><strong style="color:var(--text);">Bust (501/301 DO):</strong> Unter 0 oder Rest=1 → Aufnahme zählt nicht.</div>
-      </div>
-    </section>
-
-    <section class="panel">
       <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
         <div>
           <h3 style="margin:0;">Statistik je Spieler</h3>
@@ -398,11 +388,31 @@
     </section>
   </main>
 
+  <!-- Socket optional (nur wenn du Backend wirklich nutzt) -->
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
   <script>
-    // -----------------------------
+    // ============================================================
+    // KONFIG
+    // ============================================================
+    const API_BASE = "http://localhost:4000";
+    let useBackend = false; // <- TRUE nur, wenn du wirklich Backend/Socket hast.
+
+    const LOCAL_KEY = "dart-local-state-v2";
+    const MAX_PLAYERS = 10;
+
+    const MODES = {
+      "501": { label: "501 (Double-Out)", start: 501, type: "x01" },
+      "301": { label: "301 (Double-Out)", start: 301, type: "x01" },
+      "atc": { label: "Around the Clock", start: 0, type: "atc" },
+      "shanghai": { label: "Shanghai", start: 0, type: "shanghai" }
+    };
+
+    const throwNumbersList = [...Array(20).keys()].map(n => n + 1).concat([25]);
+
+    // ============================================================
     // DOM
-    // -----------------------------
+    // ============================================================
     const playerForm = document.getElementById("playerForm");
     const playerNameInput = document.getElementById("playerName");
     const startScoreInput = document.getElementById("startScore");
@@ -419,6 +429,7 @@
     const startGameBtn = document.getElementById("startGameBtn");
     const nextRoundBtn = document.getElementById("nextRoundBtn");
     const resetAllBtn = document.getElementById("resetAllBtn");
+    const clearLocalBtn = document.getElementById("clearLocalBtn");
     const turnInfo = document.getElementById("turnInfo");
     const checkoutBox = document.getElementById("checkoutBox");
 
@@ -426,13 +437,36 @@
     const statsBody = document.getElementById("statsBody");
     const statsNote = document.getElementById("statsNote");
 
-    // -----------------------------
-    // Helpers / Backend
-    // -----------------------------
-    const API_BASE = "http://localhost:4000";
-    const useBackend = true; // auf false setzen, um rein lokal zu spielen
-    let backendMatch = null;
+    // ============================================================
+    // STATE
+    // ============================================================
+    const state = {
+      mode: gameModeSelect.value,
 
+      // neu
+      matchStarted: false,  // wurde jemals gestartet?
+      legEnded: false,      // gerade zwischen zwei Legs?
+
+      running: false,
+
+      players: [], // {id,name,score,legs,sets}
+      throws: [],  // {id, playerId, num, mult, score, turn, dartInTurn, bust?, finishAttempt?, hitFlag?}
+      statsTotals: {}, // playerId -> {darts,singles,doubles,triples,points}
+
+      currentPlayerIndex: 0,
+      dartsInTurn: 0,
+      globalTurnCounter: 1,
+      turnSnapshot: null, // snapshot per turn (bust/Shanghai S/D/T)
+
+      // mode-specific
+      atcTargetIndex: {},  // playerId -> 0..20 (20 => Bull)
+      shanghaiRound: 1,     // 1..20
+      shanghaiPoints: {},   // playerId -> points
+    };
+
+    // ============================================================
+    // UTIL
+    // ============================================================
     const createId = () => {
       return (typeof crypto !== "undefined" && crypto.randomUUID)
         ? crypto.randomUUID()
@@ -444,32 +478,32 @@
       return Number.isFinite(n) ? Math.max(0, Math.min(2000, n)) : fallback;
     };
 
-    const throwNumbersList = [...Array(20).keys()].map(n => n + 1).concat([25]);
-
-    function labelForMultiplier(m) {
+    function labelForMultiplier(m){
       if (m === 1) return "Single";
       if (m === 2) return "Double";
       return "Triple";
     }
 
-    function computeScore(num, mult) {
-      // Bull: Single=25, Double=50
+    function isValidTriple(num){ return num >= 1 && num <= 20; }
+
+    function computeScore(num, mult){
       if (num === 25 && mult === 2) return 50;
       if (num === 25 && mult === 1) return 25;
       return num * mult;
     }
 
-    function isValidTriple(num){ return num >= 1 && num <= 20; }
+    function isFinishingDouble(num, mult){
+      if (num === 25 && mult === 2) return true; // Double Bull
+      return mult === 2;
+    }
 
-    // -----------------------------
-    // Game modes
-    // -----------------------------
-    const MODES = {
-      "501": { label: "501 (Double-Out)", start: 501, type: "x01" },
-      "301": { label: "301 (Double-Out)", start: 301, type: "x01" },
-      "atc": { label: "Around the Clock", start: 0, type: "atc" },
-      "shanghai": { label: "Shanghai", start: 0, type: "shanghai" }
-    };
+    function getMode(){ return MODES[state.mode]; }
+
+    function getATCTargetForPlayer(playerId){
+      const idx = (state.atcTargetIndex[playerId] != null) ? state.atcTargetIndex[playerId] : 0;
+      if (idx <= 19) return idx + 1; // 1..20
+      return 25; // Bull
+    }
 
     function suggestCheckout(score) {
       const chart = {
@@ -507,362 +541,74 @@
       return chart[score] || "Rest stellen (Double-Out beachten).";
     }
 
-    // -----------------------------
-    // State
-    // -----------------------------
-    const state = {
-      players: [],
-      throws: [], // {id, playerId, num, mult, score, turn, dartInTurn}
-      mode: "501",
-      running: false,
-
-      currentPlayerIndex: 0,
-      dartsInTurn: 0,
-      turnStartSnapshot: null, // für Bust (x01/shanghai turn logic)
-      globalTurnCounter: 1,
-
-      // Mode-specific
-      atcTargetIndex: {}, // playerId -> idx (0..20 where 20 means Bull target)
-      shanghaiRound: 1,    // 1..20
-      shanghaiPoints: {},  // playerId -> points
-    };
-
-    // -----------------------------
-    // Rendering
-    // -----------------------------
-    function renderModeInfo(){
-      const m = MODES[state.mode];
-      modeInfo.textContent = `Modus: ${m.label}`;
-      // Startscore-Feld sinnvoll setzen
-      if (m.type === "x01") startScoreInput.value = m.start;
-      else startScoreInput.value = 0;
-
-      // Mode lock when running
-      gameModeSelect.disabled = state.running;
-      startScoreInput.disabled = state.running;
-    }
-
-    function renderThrowNumbers(){
-      throwNumbers.innerHTML = "";
-      throwNumbersList.forEach(num => {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "num-btn";
-        btn.textContent = (num === 25 ? "25 (Bull)" : String(num));
-        btn.addEventListener("click", () => addThrow(num));
-        throwNumbers.appendChild(btn);
-      });
-    }
-
-    function renderTurnInfo(){
-      if (!state.players.length){
-        turnInfo.textContent = "Aktiver Spieler: –";
-        return;
-      }
-      const p = state.players[state.currentPlayerIndex];
-      const dartNo = Math.min(state.dartsInTurn + 1, 3);
-
-      const m = MODES[state.mode];
-      if (m.type === "x01"){
-        turnInfo.textContent = `Aktiver Spieler: ${p.name} — Dart ${dartNo}/3 — Rest: ${p.score}`;
-      } else if (m.type === "atc"){
-        const target = getATCTargetForPlayer(p.id);
-        turnInfo.textContent = `Aktiver Spieler: ${p.name} — Dart ${dartNo}/3 — Ziel: ${target === 25 ? "Bull" : target}`;
-      } else {
-        turnInfo.textContent = `Aktiver Spieler: ${p.name} — Dart ${dartNo}/3 — Runde: ${state.shanghaiRound}`;
+    // ============================================================
+    // LOCAL PERSISTENCE (nur Offline)
+    // ============================================================
+    function saveLocalState(){
+      if (useBackend) return;
+      try {
+        const payload = {
+          v: 2,
+          mode: state.mode,
+          matchStarted: state.matchStarted,
+          legEnded: state.legEnded,
+          running: state.running,
+          players: state.players,
+          throws: state.throws,
+          statsTotals: state.statsTotals,
+          currentPlayerIndex: state.currentPlayerIndex,
+          dartsInTurn: state.dartsInTurn,
+          globalTurnCounter: state.globalTurnCounter,
+          turnSnapshot: state.turnSnapshot,
+          atcTargetIndex: state.atcTargetIndex,
+          shanghaiRound: state.shanghaiRound,
+          shanghaiPoints: state.shanghaiPoints
+        };
+        localStorage.setItem(LOCAL_KEY, JSON.stringify(payload));
+      } catch (e) {
+        console.warn("Local save failed:", e);
       }
     }
 
-    function renderCheckoutBox(){
-      const m = MODES[state.mode];
-      if (!state.players.length){
-        checkoutBox.innerHTML = `
-          <div><strong>Aktiver Spieler:</strong> –</div>
-          <div><strong>Info:</strong> –</div>
-        `;
-        return;
-      }
-      const p = state.players[state.currentPlayerIndex];
+    function loadLocalState(){
+      if (useBackend) return;
+      try {
+        const raw = localStorage.getItem(LOCAL_KEY);
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        if (!data || data.v !== 2) return;
 
-      if (m.type === "x01"){
-        const dartsLeft = Math.max(0, 3 - state.dartsInTurn);
-        checkoutBox.innerHTML = `
-          <div><strong>Aktiver Spieler:</strong> ${p.name}</div>
-          <div><strong>Rest:</strong> ${p.score}</div>
-          <div><strong>Empfehlung:</strong> ${suggestCheckout(p.score)}</div>
-          <div><strong>Darts übrig (Aufnahme):</strong> ${dartsLeft}</div>
-        `;
-        return;
-      }
+        state.mode = data.mode || state.mode;
+        state.matchStarted = !!data.matchStarted;
+        state.legEnded = !!data.legEnded;
+        state.running = !!data.running;
+        state.players = Array.isArray(data.players) ? data.players : [];
+        state.throws = Array.isArray(data.throws) ? data.throws : [];
+        state.statsTotals = data.statsTotals || {};
+        state.currentPlayerIndex = data.currentPlayerIndex || 0;
+        state.dartsInTurn = data.dartsInTurn || 0;
+        state.globalTurnCounter = data.globalTurnCounter || 1;
+        state.turnSnapshot = data.turnSnapshot || null;
+        state.atcTargetIndex = data.atcTargetIndex || {};
+        state.shanghaiRound = data.shanghaiRound || 1;
+        state.shanghaiPoints = data.shanghaiPoints || {};
 
-      if (m.type === "atc"){
-        const t = getATCTargetForPlayer(p.id);
-        checkoutBox.innerHTML = `
-          <div><strong>Aktiver Spieler:</strong> ${p.name}</div>
-          <div><strong>Ziel:</strong> ${t === 25 ? "Bull" : t}</div>
-          <div class="muted">Treffe die Zahl in Reihenfolge. Bull zählt mit 25 oder 50.</div>
-        `;
-        return;
-      }
-
-      // Shanghai
-      const pts = (state.shanghaiPoints[p.id] != null) ? state.shanghaiPoints[p.id] : 0;
-      checkoutBox.innerHTML = `
-        <div><strong>Aktiver Spieler:</strong> ${p.name}</div>
-        <div><strong>Runde:</strong> ${state.shanghaiRound} / 20</div>
-        <div><strong>Punkte:</strong> ${pts}</div>
-        <div class="muted">Punkte nur, wenn du die Rundenzahl triffst. Shanghai (S+D+T in einer Aufnahme) = Sofort-Sieg.</div>
-      `;
-    }
-
-    function renderPlayers(){
-      playerBody.innerHTML = "";
-      if (!state.players.length){
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td colspan="4" style="text-align:center; color:var(--muted);">Noch keine Spieler hinzugefügt.</td>`;
-        playerBody.appendChild(tr);
-        return;
-      }
-
-      const m = MODES[state.mode];
-      state.players.forEach((p, idx) => {
-        const tr = document.createElement("tr");
-        if (idx === state.currentPlayerIndex) tr.classList.add("active-player");
-
-         const nameTd = document.createElement("td");
-         nameTd.textContent = p.name;
-
-         const setsTd = document.createElement("td");
-         setsTd.innerHTML = `<span class="chip">${p.sets || 0}</span>`;
-
-         const legsTd = document.createElement("td");
-         legsTd.innerHTML = `<span class="chip">${p.legs || 0}</span>`;
-
-         const statusTd = document.createElement("td");
-        if (m.type === "x01"){
-          statusTd.innerHTML = `<span class="chip">${p.score}</span>`;
-        } else if (m.type === "atc"){
-          const t = getATCTargetForPlayer(p.id);
-          const done = (state.atcTargetIndex[p.id] != null) ? state.atcTargetIndex[p.id] : 0;
-          statusTd.innerHTML = `<span class="chip">Ziel: ${t === 25 ? "Bull" : t}</span> <span class="muted">(${done}/21)</span>`;
-        } else {
-          const pts = (state.shanghaiPoints[p.id] != null) ? state.shanghaiPoints[p.id] : 0;
-          statusTd.innerHTML = `<span class="chip">${pts} P</span>`;
-        }
-
-         // Ø Spalte (Punkte/Dart bei x01, sonst „–“)
-         const avgTd = document.createElement("td");
-         let avgDisplay = "–";
-         if (state.throws.length) {
-           const darts = state.throws.filter(t => t.playerId === p.id).length;
-           const points = state.throws.filter(t => t.playerId === p.id).reduce((sum, t) => sum + t.score, 0);
-           if (darts > 0) avgDisplay = (points / darts).toFixed(1);
-         }
-         avgTd.textContent = (m.type === "x01") ? avgDisplay : "–";
-
-        const resetTd = document.createElement("td");
-        const resetWrap = document.createElement("div");
-        resetWrap.className = "action-group";
-
-        const resetBtn = document.createElement("button");
-        resetBtn.type = "button";
-        resetBtn.className = "ghost-btn";
-        resetBtn.textContent = "Reset";
-        resetBtn.addEventListener("click", () => {
-          resetPlayer(p.id);
-          renderAll();
-        });
-
-        const removeBtn = document.createElement("button");
-        removeBtn.type = "button";
-        removeBtn.className = "ghost-btn danger";
-        removeBtn.textContent = "Entfernen";
-        removeBtn.disabled = state.running; // während Runde keine Spieler löschen
-        removeBtn.addEventListener("click", () => {
-          removePlayer(p.id);
-          renderAll();
-        });
-
-        resetWrap.append(resetBtn, removeBtn);
-        resetTd.appendChild(resetWrap);
-
-         tr.append(nameTd, setsTd, legsTd, statusTd, avgTd, resetTd);
-        playerBody.appendChild(tr);
-      });
-    }
-
-    function renderThrowLog(){
-      throwLog.innerHTML = "";
-      if (!state.throws.length){
-        const empty = document.createElement("div");
-        empty.className = "muted";
-        empty.textContent = "Noch keine Würfe erfasst.";
-        throwLog.appendChild(empty);
-        return;
-      }
-
-      const reversed = [...state.throws].reverse();
-      reversed.forEach((t, revIdx) => {
-        const originalIndex = state.throws.length - 1 - revIdx;
-        const p = state.players.find(x => x.id === t.playerId);
-        const who = p ? p.name : "Unbekannt";
-
-        const row = document.createElement("div");
-        row.className = "throw-entry";
-
-        const left = document.createElement("div");
-        const label = (t.num === 0)
-          ? "Miss 0"
-          : `${labelForMultiplier(t.mult)} ${t.num === 25 ? "Bull" : t.num}`;
-        left.innerHTML = `<div><strong>${label}</strong> = ${t.score} P</div><div class="muted">von ${who} · Turn ${t.turn} · Dart ${t.dartInTurn}</div>`;
-
-        const right = document.createElement("div");
-        right.className = "right";
-
-        const edit = document.createElement("button");
-        edit.type = "button";
-        edit.className = "ghost-btn";
-        edit.textContent = "Ändern";
-        edit.addEventListener("click", () => editThrow(originalIndex));
-
-        const del = document.createElement("button");
-        del.type = "button";
-        del.className = "ghost-btn danger";
-        del.textContent = "Entfernen";
-        del.addEventListener("click", () => {
-          state.throws.splice(originalIndex, 1);
-          recomputeFromThrows();
-          renderAll();
-        });
-
-        right.append(edit, del);
-        row.append(left, right);
-        throwLog.appendChild(row);
-
-        if (revIdx < reversed.length - 1){
-          const hr = document.createElement("hr");
-          hr.className = "throw-sep";
-          throwLog.appendChild(hr);
-        }
-      });
-    }
-
-    function renderStats(){
-      const m = MODES[state.mode];
-
-      if (!state.players.length){
-        statsHead.innerHTML = "";
-        statsBody.innerHTML = `<tr class="empty"><td style="text-align:center; color:var(--muted);">Noch keine Daten.</td></tr>`;
-        return;
-      }
-
-      if (m.type === "x01"){
-        statsNote.textContent = "Darts, Singles/Doubles/Triples, Punkte, Ø Punkte/Dart.";
-        statsHead.innerHTML = `
-          <tr>
-           <th>Name</th><th>Darts</th><th>Singles</th><th>Doubles</th><th>Triples</th><th>Punkte</th><th>Ø</th>
-          </tr>
-        `;
-      } else if (m.type === "atc"){
-        statsNote.textContent = "Darts, Treffer aufs Ziel, Fortschritt (0–21).";
-        statsHead.innerHTML = `
-          <tr>
-            <th>Name</th><th>Darts</th><th>Treffer</th><th>Fortschritt</th><th>Aktuelles Ziel</th>
-          </tr>
-        `;
-      } else {
-        statsNote.textContent = "Darts, Singles/Doubles/Triples (auf Rundenzahlen), Punkte, Ø Punkte/Dart.";
-        statsHead.innerHTML = `
-          <tr>
-            <th>Name</th><th>Darts</th><th>Singles</th><th>Doubles</th><th>Triples</th><th>Punkte</th><th>Ø</th>
-          </tr>
-        `;
-      }
-
-      // Compute
-      const stats = {};
-      state.players.forEach(p => {
-        stats[p.id] = { name:p.name, darts:0, singles:0, doubles:0, triples:0, points:0, hits:0 };
-      });
-
-      state.throws.forEach(t => {
-        const s = stats[t.playerId];
-        if (!s) return;
-        s.darts += 1;
-
-        if (t.mult === 1) s.singles += 1;
-        else if (t.mult === 2) s.doubles += 1;
-        else if (t.mult === 3) s.triples += 1;
-
-        s.points += t.score;
-
-        // ATC hits: zählt nur wenn es ein Ziel-Treffer war (wir setzen hitFlag beim Simulieren)
-        if (t.hitFlag) s.hits += 1;
-      });
-
-      statsBody.innerHTML = "";
-      state.players.forEach(p => {
-        const s = stats[p.id];
-        if (!s) return;
-
-        const tr = document.createElement("tr");
-
-        if (m.type === "x01"){
-          const avg = s.darts ? (s.points / s.darts).toFixed(1) : "0.0";
-          tr.innerHTML = `
-            <td>${s.name}</td>
-            <td>${s.darts}</td>
-            <td>${s.singles}</td>
-            <td>${s.doubles}</td>
-            <td>${s.triples}</td>
-            <td>${s.points}</td>
-            <td>${avg}</td>
-          `;
-        } else if (m.type === "atc"){
-          const prog = (state.atcTargetIndex[p.id] != null) ? state.atcTargetIndex[p.id] : 0;
-          const target = getATCTargetForPlayer(p.id);
-          tr.innerHTML = `
-            <td>${s.name}</td>
-            <td>${s.darts}</td>
-            <td>${s.hits}</td>
-            <td>${prog}/21</td>
-            <td>${target === 25 ? "Bull" : target}</td>
-          `;
-        } else {
-          const pts = (state.shanghaiPoints[p.id] != null) ? state.shanghaiPoints[p.id] : 0;
-          const avg = s.darts ? (pts / s.darts).toFixed(1) : "0.0";
-          tr.innerHTML = `
-            <td>${s.name}</td>
-            <td>${s.darts}</td>
-            <td>${s.singles}</td>
-            <td>${s.doubles}</td>
-            <td>${s.triples}</td>
-            <td>${pts}</td>
-            <td>${avg}</td>
-          `;
-        }
-
-        statsBody.appendChild(tr);
-      });
-
-      if (!statsBody.children.length){
-        statsBody.innerHTML = `<tr class="empty"><td style="text-align:center; color:var(--muted);">Noch keine Daten.</td></tr>`;
+        gameModeSelect.value = state.mode;
+        renderAll();
+      } catch (e) {
+        console.warn("Local load failed:", e);
       }
     }
 
-    function renderAll(){
-      renderModeInfo();
-      renderPlayers();
-      renderTurnInfo();
-      renderCheckoutBox();
-      renderThrowLog();
-      renderStats();
-      renderMultiplierUI();
+    function clearLocalState(){
+      if (useBackend) return;
+      localStorage.removeItem(LOCAL_KEY);
+      hardResetButKeepPlayers(false);
     }
 
-    // -----------------------------
-    // Celebration
-    // -----------------------------
+    // ============================================================
+    // CELEBRATION
+    // ============================================================
     function triggerWinCelebration(text){
       const overlay = document.createElement("div");
       overlay.className = "win-overlay";
@@ -888,487 +634,599 @@
       setTimeout(() => overlay.remove(), 3000);
     }
 
-    // -----------------------------
-    // Multiplier UI
-    // -----------------------------
-     let selectedMultiplier = 1; // Standard: Single
+    // ============================================================
+    // MULTIPLIER UI
+    // ============================================================
+    let selectedMultiplier = 1;
 
-     function renderMultiplierUI(){
-       multiButtons.querySelectorAll(".chip-btn").forEach(btn => {
-         const mult = Number(btn.dataset.mult);
-         btn.classList.toggle("active", mult === selectedMultiplier);
-       });
-       currentSelection.textContent = `Auswahl: ${labelForMultiplier(selectedMultiplier)}`;
+    function renderMultiplierUI(){
+      multiButtons.querySelectorAll(".chip-btn").forEach(btn => {
+        const mult = Number(btn.dataset.mult);
+        btn.classList.toggle("active", mult === selectedMultiplier);
+      });
+      currentSelection.textContent = `Auswahl: ${labelForMultiplier(selectedMultiplier)}`;
     }
 
     multiButtons.addEventListener("click", (e) => {
       const btn = e.target.closest(".chip-btn");
       if (!btn) return;
-      const mult = Number(btn.dataset.mult);
-      selectedMultiplier = mult;
+      selectedMultiplier = Number(btn.dataset.mult) || 1;
       renderMultiplierUI();
     });
 
-    // -----------------------------
-    // Player management
-    // -----------------------------
-    const MAX_PLAYERS = 10;
+    // ============================================================
+    // PLAYER + INIT FOR MODE
+    // ============================================================
+    function ensureStats(playerId){
+      if (!state.statsTotals[playerId]){
+        state.statsTotals[playerId] = { darts:0, singles:0, doubles:0, triples:0, points:0 };
+      }
+    }
+
+    function initPlayerForCurrentMode(player){
+      const m = getMode();
+      ensureStats(player.id);
+
+      if (m.type === "x01"){
+        player.score = m.start;
+      } else if (m.type === "atc"){
+        state.atcTargetIndex[player.id] = 0;
+      } else {
+        state.shanghaiPoints[player.id] = 0;
+      }
+    }
+
+    function createPlayer(name){
+      const m = getMode();
+
+      // Wenn Spiel läuft: x01 Startscore IMMER m.start (dein Wunsch)
+      // Wenn Spiel NICHT läuft: du darfst im UI startScoreInput nutzen
+      const start = (m.type === "x01")
+        ? (state.running ? m.start : clampScore(startScoreInput.value, m.start))
+        : 0;
+
+      return {
+        id: createId(),
+        name,
+        score: start,
+        legs: 0,
+        sets: 0
+      };
+    }
 
     function removePlayer(playerId){
       const idx = state.players.findIndex(p => p.id === playerId);
       if (idx === -1) return;
+
       state.players.splice(idx, 1);
-      if (state.currentPlayerIndex >= state.players.length) state.currentPlayerIndex = 0;
-      // cleanup mode maps
+      delete state.statsTotals[playerId];
       delete state.atcTargetIndex[playerId];
       delete state.shanghaiPoints[playerId];
-      // remove throws of player
+
       state.throws = state.throws.filter(t => t.playerId !== playerId);
-      recomputeFromThrows();
+
+      if (state.currentPlayerIndex >= state.players.length) state.currentPlayerIndex = 0;
+      recomputeFromThrows(); // hält Spiel konsistent
     }
 
+    // Reset einzelner Spieler: nur wenn NICHT running (wird auch UI-disabled)
     function resetPlayer(playerId){
-      const m = MODES[state.mode];
       const p = state.players.find(x => x.id === playerId);
       if (!p) return;
 
-      if (m.type === "x01"){
-        p.score = m.start;
-        p.startScore = m.start;
-      } else if (m.type === "atc"){
-        state.atcTargetIndex[playerId] = 0;
-      } else {
-        state.shanghaiPoints[playerId] = 0;
-        state.shanghaiRound = 1;
-      }
-      // optional: throws bleiben, aber das wäre inkonsistent → wir resetten Runde, wenn man Spieler resetten will
-      state.throws.length = 0;
-      resetTurnState();
-    }
+      initPlayerForCurrentMode(p);
+      state.throws = state.throws.filter(t => t.playerId !== playerId);
+      state.statsTotals[playerId] = { darts:0, singles:0, doubles:0, triples:0, points:0 };
 
-    function resetTurnState(){
+      // Turn state sauber setzen (falls Spieler aktuell war)
       state.currentPlayerIndex = 0;
       state.dartsInTurn = 0;
       state.globalTurnCounter = 1;
-      state.turnStartSnapshot = null;
+      state.turnSnapshot = snapshotTurnForCurrentPlayer();
+
+      recomputeFromThrows();
     }
 
-    // -----------------------------
-    // Mode mechanics
-    // -----------------------------
-    function getATCTargetForPlayer(playerId){
-      const idx = (state.atcTargetIndex[playerId] != null) ? state.atcTargetIndex[playerId] : 0; // 0..20
-      if (idx <= 19) return idx + 1; // 1..20
-      return 25; // Bull
-    }
-
-    function startRound(){
-      if (useBackend) {
-        // Backend: Match neu anlegen
-        apiCreateMatch()
-          .then(match => adoptBackend(match, []))
-          .catch(err => alert(err.message || "Backend-Start fehlgeschlagen"));
-        return;
-      }
-
-      if (!state.players.length){
-        alert("Bitte zuerst Spieler anlegen.");
-        return;
-      }
-
-      state.running = true;
-      state.throws.length = 0;
-      resetTurnState();
-
-      const m = MODES[state.mode];
-
-      if (m.type === "x01"){
-        state.players.forEach(p => {
-          p.score = m.start;
-          p.startScore = m.start;
-        });
-      } else if (m.type === "atc"){
-        state.players.forEach(p => state.atcTargetIndex[p.id] = 0);
-      } else {
-        state.players.forEach(p => state.shanghaiPoints[p.id] = 0);
-        state.shanghaiRound = 1;
-      }
-
-      // Snapshot at turn start
-      state.turnStartSnapshot = snapshotModeStateForCurrentPlayer();
-
-      renderAll();
-    }
-
-    function nextRound(){
-      if (useBackend){
-        // für Backend: einfach Match neu starten mit gleicher Reihenfolge
-        apiCreateMatch()
-          .then(match => adoptBackend(match, []))
-          .catch(err => alert(err.message || "Neue Runde fehlgeschlagen"));
-        return;
-      }
-      if (!state.players.length) return;
-
-      // rotate starter
-      state.currentPlayerIndex = (state.currentPlayerIndex + 1) % state.players.length;
-      // move that starter to front
-      const starter = state.players.splice(state.currentPlayerIndex, 1)[0];
-      state.players.unshift(starter);
-
-      startRound();
-    }
-
-    function snapshotModeStateForCurrentPlayer(){
+    // ============================================================
+    // TURN / ROUND CONTROL
+    // ============================================================
+    function snapshotTurnForCurrentPlayer(){
       const p = state.players[state.currentPlayerIndex];
-      const m = MODES[state.mode];
-
+      const m = getMode();
       if (!p) return null;
 
       if (m.type === "x01"){
         return { score: p.score };
       }
       if (m.type === "atc"){
-        return { targetIndex: (state.atcTargetIndex[p.id] != null) ? state.atcTargetIndex[p.id] : 0 };
+        return { targetIndex: state.atcTargetIndex[p.id] ?? 0 };
       }
-      // shanghai
-      return {
-        round: state.shanghaiRound,
-        points: (state.shanghaiPoints[p.id] != null) ? state.shanghaiPoints[p.id] : 0,
-        // for shanghai: which singles/doubles/triples hit this turn for current round
-        s:false, d:false, t:false
-      };
+      // Shanghai: track s/d/t hits within this turn for current round
+      return { s:false, d:false, t:false };
     }
 
     function advancePlayer(){
+      if (!state.players.length) return;
       state.currentPlayerIndex = (state.currentPlayerIndex + 1) % state.players.length;
       state.dartsInTurn = 0;
       state.globalTurnCounter += 1;
-      state.turnStartSnapshot = snapshotModeStateForCurrentPlayer();
+      state.turnSnapshot = snapshotTurnForCurrentPlayer();
     }
 
     function endTurn(){
+      const m = getMode();
       advancePlayer();
 
-      // Shanghai: if we just completed a full cycle of players, advance round
-      if (MODES[state.mode].type === "shanghai"){
+      if (m.type === "shanghai"){
         if (state.currentPlayerIndex === 0){
           state.shanghaiRound += 1;
           if (state.shanghaiRound > 20){
-            // decide winner
+            // winner by points
             const winner = state.players
-              .map(p => ({ p, pts: (state.shanghaiPoints[p.id] != null) ? state.shanghaiPoints[p.id] : 0 }))
+              .map(p => ({ p, pts: state.shanghaiPoints[p.id] ?? 0 }))
               .sort((a,b) => b.pts - a.pts)[0];
             triggerWinCelebration(`Shanghai Ende! Gewinner: ${winner.p.name} (${winner.pts} Punkte)`);
-            startRound(); // start new round fresh
+            startLegFresh(); // neues Leg
             return;
           }
         }
-        // new snapshot for next player
-        state.turnStartSnapshot = snapshotModeStateForCurrentPlayer();
+        state.turnSnapshot = snapshotTurnForCurrentPlayer();
       }
     }
 
     function bustCurrentTurn(){
       const p = state.players[state.currentPlayerIndex];
-      const snap = state.turnStartSnapshot;
-      const m = MODES[state.mode];
+      const m = getMode();
+      const snap = state.turnSnapshot;
       if (!p || !snap) return;
 
       if (m.type === "x01"){
         p.score = snap.score;
       }
-      // In x01: turn ends immediately
       endTurn();
     }
 
-    function isFinishingDouble(num, mult){
-      // Double bull counts as double
-      if (num === 25 && mult === 2) return true;
-      return mult === 2;
+    function startLegFresh(){
+      const m = getMode();
+
+      // Leg läuft jetzt
+      state.matchStarted = true;
+      state.running = true;
+      state.legEnded = false;
+
+      // Leg-Log leeren (Stats bleiben über Match erhalten)
+      state.throws.length = 0;
+
+      // StatsTotals NICHT löschen (cumulative). Nur sicherstellen, dass jeder Spieler einen Eintrag hat.
+      state.players.forEach(p => ensureStats(p.id));
+
+      // mode-specific reset fürs neue Leg
+      if (m.type === "x01"){
+        state.players.forEach(p => { p.score = m.start; });
+      } else if (m.type === "atc"){
+        // ATC pro Leg neu
+        state.atcTargetIndex = {};
+        state.players.forEach(p => state.atcTargetIndex[p.id] = 0);
+      } else {
+        // Shanghai pro Leg neu
+        state.shanghaiRound = 1;
+        state.shanghaiPoints = {};
+        state.players.forEach(p => state.shanghaiPoints[p.id] = 0);
+      }
+
+      state.currentPlayerIndex = 0;
+      state.dartsInTurn = 0;
+      state.globalTurnCounter = 1;
+      state.turnSnapshot = snapshotTurnForCurrentPlayer();
+
+      renderAll();
+      saveLocalState();
     }
 
-    // -----------------------------
-    // Core: Add Throw
-    // -----------------------------
-    async function addThrow(num){
+    function startGame(){
+      if (useBackend){
+        alert("Backend-Modus: Start/Sync bitte über dein Backend lösen (hier Offline-Start). Setze useBackend=false.");
+        return;
+      }
       if (!state.players.length){
         alert("Bitte zuerst Spieler anlegen.");
         return;
       }
-      if (!state.running && !useBackend){
-        alert("Bitte erst „Spiel starten“ drücken.");
-        return;
-      }
 
-      // Backend: send throw
-      if (useBackend){
-        try {
-          await apiThrow(num, selectedMultiplier || 1);
-          // UI wird durch socket-Event aktualisiert; falls kein Socket, könnten wir fallback adopten
-        } catch (e) {
-          alert(e.message || "Wurf fehlgeschlagen");
-        }
-        // nach Backend-Wurf wieder auf Single
-        selectedMultiplier = 1;
-        selectedNumber = null;
-        renderMultiplierUI();
-        return;
-      }
+      state.mode = gameModeSelect.value;
 
-      // Miss
-      if (num === 0){
-        recordThrow(0, 1);
-        state.dartsInTurn += 1;
-        if (state.dartsInTurn >= 3) endTurn();
-        renderAll();
-        return;
-      }
-
-      // Validate multiplier vs num (default Single)
-      let mult = selectedMultiplier;
-      if (mult === null) mult = 1;
-
-      // Bull: no triple
-      if (num === 25 && mult === 3) mult = 2;
-      // Triple only 1..20
-      if (mult === 3 && !isValidTriple(num)) mult = 2;
-
-      recordThrow(num, mult);
-
-      // Apply mode rules
-      const modeType = MODES[state.mode].type;
-      const p = state.players[state.currentPlayerIndex];
-
-      if (modeType === "x01"){
-        const score = computeScore(num, mult);
-        const newScore = p.score - score;
-
-        // Bust checks
-        if (newScore < 0 || newScore === 1){
-          // turn invalid
-          markLastThrowMeta({ bust: true });
-          bustCurrentTurn();
-          renderAll();
-          return;
-        }
-
-        if (newScore === 0){
-          // must finish on double
-          if (!isFinishingDouble(num, mult)){
-            markLastThrowMeta({ bust: true, finishAttempt: true });
-            bustCurrentTurn();
-            renderAll();
-            return;
-          }
-          // WIN
-           p.legs = (p.legs || 0) + 1;
-           if (p.legs >= 3) {
-             p.sets = (p.sets || 0) + 1;
-             state.players.forEach(pl => pl.legs = 0);
-           }
-          p.score = 0;
-          triggerWinCelebration(`Glückwunsch, ${p.name} hat gewonnen!`);
-          // Winner starts next round
-          state.players = [p, ...state.players.filter(x => x.id !== p.id)];
-          startRound();
-          return;
-        }
-
-        // Normal subtract
-        p.score = newScore;
-
-        state.dartsInTurn += 1;
-        if (state.dartsInTurn >= 3) endTurn();
-        renderAll();
-        selectedMultiplier = 1;
-        selectedNumber = null;
-        renderMultiplierUI();
-        return;
-      }
-
-      if (modeType === "atc"){
-        const target = getATCTargetForPlayer(p.id);
-        let hit = false;
-
-        // Bull target: 25 or 50 counts
-        if (target === 25){
-          if (num === 25) hit = true;
-        } else {
-          if (num === target) hit = true;
-        }
-
-        if (hit){
-          state.atcTargetIndex[p.id] = ((state.atcTargetIndex[p.id] != null) ? state.atcTargetIndex[p.id] : 0) + 1;
-          markLastThrowMeta({ hitFlag: true });
-          // win if completed Bull
-          if (((state.atcTargetIndex[p.id] != null) ? state.atcTargetIndex[p.id] : 0) >= 21){
-            p.legs = (p.legs || 0) + 1;
-            triggerWinCelebration(`ATC: ${p.name} hat gewonnen!`);
-            startRound();
-            return;
-          }
-        }
-
-        state.dartsInTurn += 1;
-        if (state.dartsInTurn >= 3) endTurn();
-        renderAll();
-        selectedMultiplier = 1;
-        selectedNumber = null;
-        renderMultiplierUI();
-        return;
-      }
-
-      // Shanghai
-      if (modeType === "shanghai"){
-        const round = state.shanghaiRound;
-        const score = computeScore(num, mult);
-
-        // Only score if num matches round number (Bull doesn't score)
-        if (num === round){
-          state.shanghaiPoints[p.id] = ((state.shanghaiPoints[p.id] != null) ? state.shanghaiPoints[p.id] : 0) + score;
-
-          // Track S/D/T within THIS turn for Shanghai
-          if (!state.turnStartSnapshot || typeof state.turnStartSnapshot.s !== "boolean"){
-            state.turnStartSnapshot = snapshotModeStateForCurrentPlayer();
-          }
-          if (mult === 1) state.turnStartSnapshot.s = true;
-          if (mult === 2) state.turnStartSnapshot.d = true;
-          if (mult === 3) state.turnStartSnapshot.t = true;
-
-          markLastThrowMeta({ hitFlag: true });
-
-          // Shanghai achieved?
-          if (state.turnStartSnapshot.s && state.turnStartSnapshot.d && state.turnStartSnapshot.t){
-             p.legs = (p.legs || 0) + 1;
-             if (p.legs >= 3) {
-               p.sets = (p.sets || 0) + 1;
-               state.players.forEach(pl => pl.legs = 0);
-             }
-             triggerWinCelebration(`Shanghai! ${p.name} gewinnt in Runde ${round}!`);
-            startRound();
-            return;
-          }
-        }
-
-        state.dartsInTurn += 1;
-        if (state.dartsInTurn >= 3) endTurn();
-        renderAll();
-        selectedMultiplier = 1;
-        selectedNumber = null;
-        renderMultiplierUI();
-        return;
-      }
+      // Wenn Match schon gestartet war und nur pausiert ist (legEnded), starten wir das nächste Leg:
+      startLegFresh();
     }
 
-    function recordThrow(num, mult){
-      const p = state.players[state.currentPlayerIndex];
+    function nextRound(){
+      if (useBackend){
+        alert("Backend-Modus: Neue Runde bitte serverseitig starten.");
+        return;
+      }
+      if (!state.players.length) return;
+
+      // Starter rotieren: erster Spieler ans Ende
+      const first = state.players.shift();
+      state.players.push(first);
+
+      startLegFresh();
+    }
+
+    function hardResetButKeepPlayers(keepPlayers = true){
+      // alles resetten, optional Spieler behalten
+      state.matchStarted = false;
+      state.legEnded = false;
+      state.running = false;
+      state.throws.length = 0;
+      state.statsTotals = {};
+
+      state.atcTargetIndex = {};
+      state.shanghaiPoints = {};
+      state.shanghaiRound = 1;
+
+      state.currentPlayerIndex = 0;
+      state.dartsInTurn = 0;
+      state.globalTurnCounter = 1;
+      state.turnSnapshot = null;
+
+      if (!keepPlayers){
+        state.players = [];
+      } else {
+        // Sets/Legs zurücksetzen und Scores passend zum Modus
+        const m = getMode();
+        state.players.forEach(p => {
+          p.legs = 0; p.sets = 0;
+          ensureStats(p.id);
+          if (m.type === "x01") p.score = m.start;
+          if (m.type === "atc") state.atcTargetIndex[p.id] = 0;
+          if (m.type === "shanghai") state.shanghaiPoints[p.id] = 0;
+        });
+      }
+
+      renderAll();
+      saveLocalState();
+    }
+
+    // ============================================================
+    // THROW / STATS
+    // ============================================================
+    function accumulateStats(playerId, mult, score){
+      ensureStats(playerId);
+      const s = state.statsTotals[playerId];
+      s.darts += 1;
+      if (mult === 1) s.singles += 1;
+      else if (mult === 2) s.doubles += 1;
+      else if (mult === 3) s.triples += 1;
+      s.points += score;
+    }
+
+    // Leg-Ende pausieren
+    function endLeg(winnerName){
+      state.running = false;
+      state.legEnded = true;
+
+      triggerWinCelebration(`Leg gewonnen: ${winnerName}!`);
+
+      renderAll();
+      saveLocalState();
+    }
+
+    function recordThrow(playerId, num, mult){
+      // normalize constraints
+      if (num === 25 && mult === 3) mult = 2;
+      if (mult === 3 && !isValidTriple(num)) mult = 2;
+
       const score = (num === 0) ? 0 : computeScore(num, mult);
-      state.throws.push({
+
+      const entry = {
         id: createId(),
-        playerId: p.id,
+        playerId,
         num,
         mult,
         score,
         turn: state.globalTurnCounter,
         dartInTurn: state.dartsInTurn + 1
-      });
+      };
+      state.throws.push(entry);
+      accumulateStats(playerId, mult, score);
+      return entry;
     }
 
-    function markLastThrowMeta(meta){
-      const last = state.throws[state.throws.length - 1];
-      if (!last) return;
-      Object.assign(last, meta);
-    }
-
-    // -----------------------------
-    // Recompute from throws (Edit/Delete)
-    // -----------------------------
-    function recomputeFromThrows(){
-      if (!state.players.length) return;
-
-      const m = MODES[state.mode];
-      // reset base
-      resetTurnState();
-      state.running = true;
-
-      if (m.type === "x01"){
-        state.players.forEach(p => { p.score = m.start; p.startScore = m.start; });
-      } else if (m.type === "atc"){
-        state.players.forEach(p => state.atcTargetIndex[p.id] = 0);
-      } else {
-        state.players.forEach(p => state.shanghaiPoints[p.id] = 0);
-        state.shanghaiRound = 1;
+    async function addThrow(num){
+      if (!state.players.length){
+        alert("Bitte zuerst Spieler anlegen.");
+        return;
+      }
+      if (!state.running){
+        if (state.legEnded){
+          alert("Leg ist beendet. Drücke „Neue Runde“, um das nächste Leg zu starten.");
+        } else {
+          alert("Bitte erst „Spiel starten“ drücken.");
+        }
+        return;
       }
 
-      state.turnStartSnapshot = snapshotModeStateForCurrentPlayer();
+      if (useBackend){
+        alert("Backend-Modus ist hier nicht implementiert (useBackend=false empfohlen).");
+        return;
+      }
 
-      // simulate in order
-      for (let i=0;i<state.throws.length;i++){
-        const t = state.throws[i];
-        // ensure player exists
+      const p = state.players[state.currentPlayerIndex];
+      const m = getMode();
+
+      // Miss
+      if (num === 0){
+        recordThrow(p.id, 0, 1);
+        state.dartsInTurn += 1;
+        if (state.dartsInTurn >= 3) endTurn();
+        renderAll(); saveLocalState();
+        return;
+      }
+
+      // multiplier selection with constraints
+      let mult = selectedMultiplier || 1;
+      if (num === 25 && mult === 3) mult = 2;
+      if (mult === 3 && !isValidTriple(num)) mult = 2;
+
+      const entry = recordThrow(p.id, num, mult);
+
+      // --- apply mode rules ---
+      if (m.type === "x01"){
+        // snapshot if missing
+        if (!state.turnSnapshot) state.turnSnapshot = snapshotTurnForCurrentPlayer();
+
+        const newScore = p.score - entry.score;
+
+        if (newScore < 0 || newScore === 1){
+          entry.bust = true;
+          bustCurrentTurn();
+          renderAll(); saveLocalState();
+          selectedMultiplier = 1; renderMultiplierUI();
+          return;
+        }
+
+        if (newScore === 0){
+          if (!isFinishingDouble(num, mult)){
+            entry.bust = true;
+            entry.finishAttempt = true;
+            bustCurrentTurn();
+            renderAll(); saveLocalState();
+            selectedMultiplier = 1; renderMultiplierUI();
+            return;
+          }
+
+          // WIN
+          p.legs = (p.legs || 0) + 1;
+          if (p.legs >= 3){
+            p.sets = (p.sets || 0) + 1;
+            state.players.forEach(pl => pl.legs = 0);
+          }
+          p.score = 0;
+
+          // Winner soll nächstes Leg anfangen: an den Anfang schieben
+          state.players = [p, ...state.players.filter(x => x.id !== p.id)];
+
+          // Leg pausieren statt automatisch neu starten:
+          endLeg(p.name);
+
+          selectedMultiplier = 1;
+          renderMultiplierUI();
+          return;
+        }
+
+        p.score = newScore;
+
+        state.dartsInTurn += 1;
+        if (state.dartsInTurn >= 3) endTurn();
+
+        renderAll(); saveLocalState();
+        selectedMultiplier = 1; renderMultiplierUI();
+        return;
+      }
+
+      if (m.type === "atc"){
+        const target = getATCTargetForPlayer(p.id);
+        const hit = (target === 25) ? (num === 25) : (num === target);
+
+        if (hit){
+          entry.hitFlag = true;
+          state.atcTargetIndex[p.id] = (state.atcTargetIndex[p.id] ?? 0) + 1;
+
+          if ((state.atcTargetIndex[p.id] ?? 0) >= 21){
+            p.legs = (p.legs || 0) + 1;
+            triggerWinCelebration(`ATC: ${p.name} hat gewonnen!`);
+            startLegFresh();
+            selectedMultiplier = 1; renderMultiplierUI();
+            return;
+          }
+        }
+
+        state.dartsInTurn += 1;
+        if (state.dartsInTurn >= 3) endTurn();
+
+        renderAll(); saveLocalState();
+        selectedMultiplier = 1; renderMultiplierUI();
+        return;
+      }
+
+      // Shanghai
+      if (m.type === "shanghai"){
+        const round = state.shanghaiRound;
+
+        // snapshot holds s/d/t flags for THIS player turn
+        if (!state.turnSnapshot || typeof state.turnSnapshot.s !== "boolean"){
+          state.turnSnapshot = snapshotTurnForCurrentPlayer();
+        }
+
+        if (num === round){
+          entry.hitFlag = true;
+          state.shanghaiPoints[p.id] = (state.shanghaiPoints[p.id] ?? 0) + entry.score;
+
+          if (mult === 1) state.turnSnapshot.s = true;
+          if (mult === 2) state.turnSnapshot.d = true;
+          if (mult === 3) state.turnSnapshot.t = true;
+
+          if (state.turnSnapshot.s && state.turnSnapshot.d && state.turnSnapshot.t){
+            p.legs = (p.legs || 0) + 1;
+            if (p.legs >= 3){
+              p.sets = (p.sets || 0) + 1;
+              state.players.forEach(pl => pl.legs = 0);
+            }
+            triggerWinCelebration(`Shanghai! ${p.name} gewinnt in Runde ${round}!`);
+            startLegFresh();
+            selectedMultiplier = 1; renderMultiplierUI();
+            return;
+          }
+        }
+
+        state.dartsInTurn += 1;
+        if (state.dartsInTurn >= 3) endTurn();
+
+        renderAll(); saveLocalState();
+        selectedMultiplier = 1; renderMultiplierUI();
+        return;
+      }
+    }
+
+    // ============================================================
+    // EDIT / DELETE THROWS
+    // ============================================================
+    function editThrow(index){
+      const t = state.throws[index];
+      if (!t) return;
+
+      const newNumStr = prompt("Neue Zahl (0–20 oder 25 für Bull):", String(t.num));
+      if (newNumStr === null) return;
+      const newNum = Number(newNumStr);
+      const allowedNums = [0, 25, ...Array.from({length:20},(_,i)=>i+1)];
+      if (!Number.isFinite(newNum) || !allowedNums.includes(newNum)){
+        alert("Bitte 0–20 oder 25 eingeben.");
+        return;
+      }
+
+      const newMultStr = prompt("Neuer Multiplikator (1=Single, 2=Double, 3=Triple):", String(t.mult));
+      if (newMultStr === null) return;
+      const newMult = Number(newMultStr);
+      if (![1,2,3].includes(newMult)){
+        alert("Multiplikator 1/2/3 wählen.");
+        return;
+      }
+
+      if (newNum === 25 && newMult === 3){
+        alert("Triple Bull gibt es nicht. Nutze Single oder Double.");
+        return;
+      }
+      if (newMult === 3 && !isValidTriple(newNum)){
+        alert("Triple nur bei 1–20 erlaubt.");
+        return;
+      }
+
+      t.num = newNum;
+      t.mult = newMult;
+
+      recomputeFromThrows();
+      renderAll(); saveLocalState();
+    }
+
+    function recomputeFromThrows(){
+      // Re-simulate everything from the current throw list (offline)
+      if (!state.players.length) return;
+
+      const m = getMode();
+
+      // Keep players and their legs/sets, but recompute scores/points/progress from scratch within current leg
+      // (Throws are only for the current leg anyway in this UI)
+      const legsSets = state.players.map(p => ({ id:p.id, legs:p.legs||0, sets:p.sets||0, name:p.name }));
+      const preservedPlayers = [...state.players];
+
+      // Reset core
+      state.statsTotals = {};
+      preservedPlayers.forEach(p => ensureStats(p.id));
+
+      state.currentPlayerIndex = 0;
+      state.dartsInTurn = 0;
+      state.globalTurnCounter = 1;
+      state.turnSnapshot = null;
+      state.running = true;
+
+      // Mode-specific reset
+      if (m.type === "x01"){
+        preservedPlayers.forEach(p => p.score = m.start);
+      }
+      if (m.type === "atc"){
+        state.atcTargetIndex = {};
+        preservedPlayers.forEach(p => state.atcTargetIndex[p.id] = 0);
+      }
+      if (m.type === "shanghai"){
+        state.shanghaiRound = 1;
+        state.shanghaiPoints = {};
+        preservedPlayers.forEach(p => state.shanghaiPoints[p.id] = 0);
+      }
+
+      // Restore legs/sets
+      preservedPlayers.forEach(p => {
+        const ls = legsSets.find(x => x.id === p.id);
+        if (ls){ p.legs = ls.legs; p.sets = ls.sets; }
+      });
+
+      state.players = preservedPlayers;
+      state.turnSnapshot = snapshotTurnForCurrentPlayer();
+
+      // Rebuild throws by simulating their order
+      const originalThrows = [...state.throws];
+      state.throws = [];
+
+      for (let i=0; i<originalThrows.length; i++){
+        const t = originalThrows[i];
         const playerIndex = state.players.findIndex(p => p.id === t.playerId);
         if (playerIndex === -1) continue;
 
-        // If log got out of sync, we force the current turn to follow log order by rotating
-        // until current player matches throw's player.
+        // Rotate until current player matches t.playerId
         while (state.players[state.currentPlayerIndex]?.id !== t.playerId){
           endTurn();
         }
 
-        // apply throw similarly, but without re-recording
-        // we also rebuild dartInTurn and turn counters
-        // set these based on current state
-        t.turn = state.globalTurnCounter;
-        t.dartInTurn = state.dartsInTurn + 1;
+        // Record same throw (re-normalize)
+        const entry = recordThrow(t.playerId, t.num, t.mult);
 
-        // validate multiplier constraints
-        if (t.num === 25 && t.mult === 3) t.mult = 2;
-        if (t.mult === 3 && !isValidTriple(t.num)) t.mult = 2;
-        t.score = (t.num === 0) ? 0 : computeScore(t.num, t.mult);
-
-        // clear meta flags
-        delete t.bust;
-        delete t.finishAttempt;
-        delete t.hitFlag;
-
-        // Now simulate
+        // Copy intent (then we re-calc flags below)
+        // Apply mode logic
         const p = state.players[state.currentPlayerIndex];
 
         if (m.type === "x01"){
-          const newScore = p.score - t.score;
+          if (!state.turnSnapshot) state.turnSnapshot = snapshotTurnForCurrentPlayer();
 
-          if (t.num === 0){
+          if (entry.num === 0){
             state.dartsInTurn += 1;
             if (state.dartsInTurn >= 3) endTurn();
             continue;
           }
 
+          const newScore = p.score - entry.score;
+
           if (newScore < 0 || newScore === 1){
-            t.bust = true;
+            entry.bust = true;
             bustCurrentTurn();
             continue;
           }
 
           if (newScore === 0){
-            if (!isFinishingDouble(t.num, t.mult)){
-              t.bust = true;
-              t.finishAttempt = true;
+            if (!isFinishingDouble(entry.num, entry.mult)){
+              entry.bust = true;
+              entry.finishAttempt = true;
               bustCurrentTurn();
               continue;
             }
-            // Win: restart round (same behavior as live)
+            // Win: we stop here (everything after is invalid for that leg)
             p.legs = (p.legs || 0) + 1;
-            if (p.legs >= 3) {
+            if (p.legs >= 3){
               p.sets = (p.sets || 0) + 1;
               state.players.forEach(pl => pl.legs = 0);
             }
-            p.score = 0;
-            // Winner starts next
             state.players = [p, ...state.players.filter(x => x.id !== p.id)];
-            // reset round and clear remaining throws after win (they are invalid)
-            state.throws = state.throws.slice(0, i + 1);
-            startRound();
+            // After win, leg restarts (clear all throws)
+            startLegFresh();
             return;
           }
 
@@ -1379,33 +1237,21 @@
         }
 
         if (m.type === "atc"){
-          if (t.num === 0){
+          if (entry.num === 0){
             state.dartsInTurn += 1;
             if (state.dartsInTurn >= 3) endTurn();
             continue;
           }
-
           const target = getATCTargetForPlayer(p.id);
-          let hit = false;
-          if (target === 25){
-            if (t.num === 25) hit = true;
-          } else {
-            if (t.num === target) hit = true;
-          }
+          const hit = (target === 25) ? (entry.num === 25) : (entry.num === target);
 
           if (hit){
-            t.hitFlag = true;
-            state.atcTargetIndex[p.id] = ((state.atcTargetIndex[p.id] != null) ? state.atcTargetIndex[p.id] : 0) + 1;
-            if (((state.atcTargetIndex[p.id] != null) ? state.atcTargetIndex[p.id] : 0) >= 21){
-            // Win: cut throws at i and restart
-            p.legs = (p.legs || 0) + 1;
-            if (p.legs >= 3) {
-              p.sets = (p.sets || 0) + 1;
-              state.players.forEach(pl => pl.legs = 0);
-            }
-            state.throws = state.throws.slice(0, i + 1);
-            startRound();
-            return;
+            entry.hitFlag = true;
+            state.atcTargetIndex[p.id] = (state.atcTargetIndex[p.id] ?? 0) + 1;
+            if ((state.atcTargetIndex[p.id] ?? 0) >= 21){
+              p.legs = (p.legs || 0) + 1;
+              startLegFresh();
+              return;
             }
           }
 
@@ -1416,29 +1262,28 @@
 
         // Shanghai
         if (m.type === "shanghai"){
+          if (!state.turnSnapshot || typeof state.turnSnapshot.s !== "boolean"){
+            state.turnSnapshot = snapshotTurnForCurrentPlayer();
+          }
+
           const round = state.shanghaiRound;
 
-          if (t.num === 0){
+          if (entry.num === 0){
             state.dartsInTurn += 1;
             if (state.dartsInTurn >= 3) endTurn();
             continue;
           }
 
-          // ensure turn snapshot has s/d/t flags
-          if (!state.turnStartSnapshot || typeof state.turnStartSnapshot.s !== "boolean"){
-            state.turnStartSnapshot = snapshotModeStateForCurrentPlayer();
-          }
+          if (entry.num === round){
+            entry.hitFlag = true;
+            state.shanghaiPoints[p.id] = (state.shanghaiPoints[p.id] ?? 0) + entry.score;
 
-          if (t.num === round){
-            t.hitFlag = true;
-            state.shanghaiPoints[p.id] = ((state.shanghaiPoints[p.id] != null) ? state.shanghaiPoints[p.id] : 0) + t.score;
-            if (t.mult === 1) state.turnStartSnapshot.s = true;
-            if (t.mult === 2) state.turnStartSnapshot.d = true;
-            if (t.mult === 3) state.turnStartSnapshot.t = true;
+            if (entry.mult === 1) state.turnSnapshot.s = true;
+            if (entry.mult === 2) state.turnSnapshot.d = true;
+            if (entry.mult === 3) state.turnSnapshot.t = true;
 
-            if (state.turnStartSnapshot.s && state.turnStartSnapshot.d && state.turnStartSnapshot.t){
-              state.throws = state.throws.slice(0, i + 1);
-              startRound();
+            if (state.turnSnapshot.s && state.turnSnapshot.d && state.turnSnapshot.t){
+              startLegFresh();
               return;
             }
           }
@@ -1448,227 +1293,464 @@
           continue;
         }
       }
-
-      renderAll();
     }
 
-    function editThrow(index){
-      const t = state.throws[index];
-      if (!t) return;
+    // ============================================================
+    // RENDERING
+    // ============================================================
+    function renderModeInfo(){
+      const m = getMode();
+      modeInfo.textContent = `Modus: ${m.label}`;
 
-      const newNumStr = prompt("Neue Zahl (0–20 oder 25 für Bull):", String(t.num));
-      if (newNumStr === null) return;
-      const newNum = Number(newNumStr);
-      const allowedNums = [0,25,...Array.from({length:20},(_,i)=>i+1)];
-      if (!Number.isFinite(newNum) || !allowedNums.includes(newNum)){
-        alert("Bitte 0–20 oder 25 eingeben.");
-        return;
-      }
+      // UI: Startscore-Feld sinnvoll
+      if (m.type === "x01") startScoreInput.value = m.start;
+      else startScoreInput.value = 0;
 
-      const newMultStr = prompt("Neuer Multiplikator (1=Single, 2=Double, 3=Triple):", String(t.mult));
-      if (newMultStr === null) return;
-      let newMult = Number(newMultStr);
-      if (![1,2,3].includes(newMult)){
-        alert("Multiplikator 1/2/3 wählen.");
-        return;
-      }
-
-      // constraints
-      if (newNum === 25 && newMult === 3) newMult = 2;
-      if (newMult === 3 && !isValidTriple(newNum)) {
-        alert("Triple nur bei 1–20 erlaubt.");
-        return;
-      }
-
-      t.num = newNum;
-      t.mult = newMult;
-      t.score = (newNum === 0) ? 0 : computeScore(newNum, newMult);
-
-      recomputeFromThrows();
-      renderAll();
+      // Moduswechsel nur wenn nicht running (sonst Chaos)
+      gameModeSelect.disabled = state.running;
+      startScoreInput.disabled = state.running;
     }
 
-    // -----------------------------
-    // UI Events
-    // -----------------------------
+    function renderThrowNumbers(){
+      throwNumbers.innerHTML = "";
+      throwNumbersList.forEach(num => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "num-btn";
+        btn.textContent = (num === 25 ? "25 (Bull)" : String(num));
+        btn.addEventListener("click", () => addThrow(num));
+        throwNumbers.appendChild(btn);
+      });
+    }
+
+    function renderTurnInfo(){
+      if (!state.players.length){
+        turnInfo.textContent = "Aktiver Spieler: –";
+        return;
+      }
+      if (!state.running){
+        turnInfo.textContent = "Aktiver Spieler: – (Spiel nicht gestartet)";
+        return;
+      }
+
+      const p = state.players[state.currentPlayerIndex];
+      const dartNo = Math.min(state.dartsInTurn + 1, 3);
+      const m = getMode();
+
+      if (m.type === "x01"){
+        turnInfo.textContent = `Aktiver Spieler: ${p.name} — Dart ${dartNo}/3 — Rest: ${p.score}`;
+      } else if (m.type === "atc"){
+        const target = getATCTargetForPlayer(p.id);
+        turnInfo.textContent = `Aktiver Spieler: ${p.name} — Dart ${dartNo}/3 — Ziel: ${target === 25 ? "Bull" : target}`;
+      } else {
+        turnInfo.textContent = `Aktiver Spieler: ${p.name} — Dart ${dartNo}/3 — Runde: ${state.shanghaiRound}`;
+      }
+    }
+
+    function renderCheckoutBox(){
+      const m = getMode();
+
+      if (!state.players.length){
+        checkoutBox.innerHTML = `
+          <div><strong>Aktiver Spieler:</strong> –</div>
+          <div><strong>Info:</strong> –</div>
+        `;
+        return;
+      }
+
+      if (!state.running){
+        checkoutBox.innerHTML = `
+          <div><strong>Aktiver Spieler:</strong> –</div>
+          <div class="muted">Drücke „Spiel starten“.</div>
+        `;
+        return;
+      }
+
+      const p = state.players[state.currentPlayerIndex];
+
+      if (m.type === "x01"){
+        const dartsLeft = Math.max(0, 3 - state.dartsInTurn);
+        checkoutBox.innerHTML = `
+          <div><strong>Aktiver Spieler:</strong> ${p.name}</div>
+          <div><strong>Rest:</strong> ${p.score}</div>
+          <div><strong>Empfehlung:</strong> ${suggestCheckout(p.score)}</div>
+          <div><strong>Darts übrig (Aufnahme):</strong> ${dartsLeft}</div>
+        `;
+        return;
+      }
+
+      if (m.type === "atc"){
+        const t = getATCTargetForPlayer(p.id);
+        checkoutBox.innerHTML = `
+          <div><strong>Aktiver Spieler:</strong> ${p.name}</div>
+          <div><strong>Ziel:</strong> ${t === 25 ? "Bull" : t}</div>
+          <div class="muted">Treffe die Zahl in Reihenfolge. Bull zählt mit 25 oder 50.</div>
+        `;
+        return;
+      }
+
+      // shanghai
+      const pts = state.shanghaiPoints[p.id] ?? 0;
+      checkoutBox.innerHTML = `
+        <div><strong>Aktiver Spieler:</strong> ${p.name}</div>
+        <div><strong>Runde:</strong> ${state.shanghaiRound} / 20</div>
+        <div><strong>Punkte:</strong> ${pts}</div>
+        <div class="muted">Punkte nur, wenn du die Rundenzahl triffst. Shanghai (S+D+T in einer Aufnahme) = Sofort-Sieg.</div>
+      `;
+    }
+
+    function renderPlayers(){
+      playerBody.innerHTML = "";
+
+      if (!state.players.length){
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td colspan="6" style="text-align:center; color:var(--muted);">Noch keine Spieler hinzugefügt.</td>`;
+        playerBody.appendChild(tr);
+        return;
+      }
+
+      const m = getMode();
+
+      state.players.forEach((p, idx) => {
+        const tr = document.createElement("tr");
+        if (state.running && idx === state.currentPlayerIndex) tr.classList.add("active-player");
+
+        const nameTd = document.createElement("td");
+        nameTd.textContent = p.name;
+
+        const setsTd = document.createElement("td");
+        setsTd.innerHTML = `<span class="chip">${p.sets || 0}</span>`;
+
+        const legsTd = document.createElement("td");
+        legsTd.innerHTML = `<span class="chip">${p.legs || 0}</span>`;
+
+        const statusTd = document.createElement("td");
+        if (m.type === "x01"){
+          statusTd.innerHTML = `<span class="chip">${p.score}</span>`;
+        } else if (m.type === "atc"){
+          const t = getATCTargetForPlayer(p.id);
+          const done = state.atcTargetIndex[p.id] ?? 0;
+          statusTd.innerHTML = `<span class="chip">Ziel: ${t === 25 ? "Bull" : t}</span> <span class="muted">(${done}/21)</span>`;
+        } else {
+          const pts = state.shanghaiPoints[p.id] ?? 0;
+          statusTd.innerHTML = `<span class="chip">${pts} P</span>`;
+        }
+
+        const avgTd = document.createElement("td");
+        let avg = "–";
+        if (m.type === "x01"){
+          const darts = state.throws.filter(t => t.playerId === p.id).length;
+          const points = state.throws.filter(t => t.playerId === p.id).reduce((sum, t) => sum + t.score, 0);
+          avg = darts > 0 ? (points / darts).toFixed(1) : "0.0";
+        }
+        avgTd.textContent = (m.type === "x01") ? avg : "–";
+
+        const actionsTd = document.createElement("td");
+        const wrap = document.createElement("div");
+        wrap.className = "action-group";
+
+        const resetBtn = document.createElement("button");
+        resetBtn.type = "button";
+        resetBtn.className = "ghost-btn";
+        resetBtn.textContent = "Reset";
+        // WICHTIG: während running NICHT resetten dürfen (dein Wunsch)
+        resetBtn.disabled = state.running;
+        resetBtn.title = state.running ? "Während eines laufenden Spiels gesperrt." : "";
+        resetBtn.addEventListener("click", () => {
+          if (state.running) return;
+          resetPlayer(p.id);
+          renderAll(); saveLocalState();
+        });
+
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "ghost-btn danger";
+        removeBtn.textContent = "Entfernen";
+        // WICHTIG: während running NICHT entfernen dürfen
+        removeBtn.disabled = state.running;
+        removeBtn.title = state.running ? "Während eines laufenden Spiels gesperrt." : "";
+        removeBtn.addEventListener("click", () => {
+          if (state.running) return;
+          removePlayer(p.id);
+          renderAll(); saveLocalState();
+        });
+
+        wrap.append(resetBtn, removeBtn);
+        actionsTd.appendChild(wrap);
+
+        tr.append(nameTd, setsTd, legsTd, statusTd, avgTd, actionsTd);
+        playerBody.appendChild(tr);
+      });
+    }
+
+    function renderThrowLog(){
+      throwLog.innerHTML = "";
+
+      if (!state.throws.length){
+        const empty = document.createElement("div");
+        empty.className = "muted";
+        empty.textContent = "Noch keine Würfe erfasst.";
+        throwLog.appendChild(empty);
+        return;
+      }
+
+      const reversed = [...state.throws].reverse();
+      reversed.forEach((t, revIdx) => {
+        const originalIndex = state.throws.length - 1 - revIdx;
+        const p = state.players.find(x => x.id === t.playerId);
+        const who = p ? p.name : "Unbekannt";
+
+        const row = document.createElement("div");
+        row.className = "throw-entry";
+
+        const left = document.createElement("div");
+        const label = (t.num === 0)
+          ? "Miss 0"
+          : `${labelForMultiplier(t.mult)} ${t.num === 25 ? "Bull" : t.num}`;
+        const flags = [
+          t.bust ? "BUST" : null,
+          t.finishAttempt ? "Finish?" : null,
+          t.hitFlag ? "Treffer" : null
+        ].filter(Boolean).map(x => `<span class="chip">${x}</span>`).join(" ");
+
+        left.innerHTML = `
+          <div><strong>${label}</strong> = ${t.score} P ${flags ? " " + flags : ""}</div>
+          <div class="muted">von ${who} · Turn ${t.turn} · Dart ${t.dartInTurn}</div>
+        `;
+
+        const right = document.createElement("div");
+        right.className = "right";
+
+        const editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.className = "ghost-btn";
+        editBtn.textContent = "Ändern";
+        editBtn.addEventListener("click", () => editThrow(originalIndex));
+
+        const delBtn = document.createElement("button");
+        delBtn.type = "button";
+        delBtn.className = "ghost-btn danger";
+        delBtn.textContent = "Entfernen";
+        delBtn.addEventListener("click", () => {
+          state.throws.splice(originalIndex, 1);
+          recomputeFromThrows();
+          renderAll(); saveLocalState();
+        });
+
+        right.append(editBtn, delBtn);
+        row.append(left, right);
+        throwLog.appendChild(row);
+
+        if (revIdx < reversed.length - 1){
+          const hr = document.createElement("hr");
+          hr.className = "throw-sep";
+          throwLog.appendChild(hr);
+        }
+      });
+    }
+
+    function renderStats(){
+      const m = getMode();
+
+      if (!state.players.length){
+        statsHead.innerHTML = "";
+        statsBody.innerHTML = `<tr class="empty"><td style="text-align:center; color:var(--muted);">Noch keine Daten.</td></tr>`;
+        return;
+      }
+
+      if (m.type === "x01"){
+        statsNote.textContent = "Darts, Singles/Doubles/Triples, Punkte, Ø Punkte/Dart.";
+        statsHead.innerHTML = `
+          <tr>
+            <th>Name</th><th>Darts</th><th>Singles</th><th>Doubles</th><th>Triples</th><th>Punkte</th><th>Ø</th>
+          </tr>
+        `;
+      } else if (m.type === "atc"){
+        statsNote.textContent = "Darts, Treffer aufs Ziel, Fortschritt (0–21).";
+        statsHead.innerHTML = `
+          <tr>
+            <th>Name</th><th>Darts</th><th>Treffer</th><th>Fortschritt</th><th>Aktuelles Ziel</th>
+          </tr>
+        `;
+      } else {
+        statsNote.textContent = "Darts, Singles/Doubles/Triples (auf Rundenzahlen), Punkte, Ø Punkte/Dart.";
+        statsHead.innerHTML = `
+          <tr>
+            <th>Name</th><th>Darts</th><th>Singles</th><th>Doubles</th><th>Triples</th><th>Punkte</th><th>Ø</th>
+          </tr>
+        `;
+      }
+
+      // Build stats rows
+      statsBody.innerHTML = "";
+
+      state.players.forEach(p => {
+        ensureStats(p.id);
+        const s = state.statsTotals[p.id];
+        const tr = document.createElement("tr");
+
+        if (m.type === "x01"){
+          const avg = s.darts ? (s.points / s.darts).toFixed(1) : "0.0";
+          tr.innerHTML = `
+            <td>${p.name}</td>
+            <td>${s.darts}</td>
+            <td>${s.singles}</td>
+            <td>${s.doubles}</td>
+            <td>${s.triples}</td>
+            <td>${s.points}</td>
+            <td>${avg}</td>
+          `;
+        } else if (m.type === "atc"){
+          const hits = state.throws.filter(t => t.playerId === p.id && t.hitFlag).length;
+          const prog = state.atcTargetIndex[p.id] ?? 0;
+          const target = getATCTargetForPlayer(p.id);
+          tr.innerHTML = `
+            <td>${p.name}</td>
+            <td>${s.darts}</td>
+            <td>${hits}</td>
+            <td>${prog}/21</td>
+            <td>${target === 25 ? "Bull" : target}</td>
+          `;
+        } else {
+          const pts = state.shanghaiPoints[p.id] ?? 0;
+          const avg = s.darts ? (pts / s.darts).toFixed(1) : "0.0";
+          tr.innerHTML = `
+            <td>${p.name}</td>
+            <td>${s.darts}</td>
+            <td>${s.singles}</td>
+            <td>${s.doubles}</td>
+            <td>${s.triples}</td>
+            <td>${pts}</td>
+            <td>${avg}</td>
+          `;
+        }
+
+        statsBody.appendChild(tr);
+      });
+    }
+
+    function renderAll(){
+      renderModeInfo();
+      renderPlayers();
+      renderTurnInfo();
+      renderCheckoutBox();
+      renderThrowLog();
+      renderStats();
+      renderMultiplierUI();
+    }
+
+    // ============================================================
+    // UI EVENTS
+    // ============================================================
     gameModeSelect.addEventListener("change", () => {
       if (state.running){
-        // should not happen due to disabled, but still safe
         gameModeSelect.value = state.mode;
         return;
       }
       state.mode = gameModeSelect.value;
       renderAll();
+      saveLocalState();
     });
 
     missBtn.addEventListener("click", () => addThrow(0));
 
     clearThrowsBtn.addEventListener("click", () => {
       if (!state.running) return;
-      // Clear current round and reset to start of round
-      startRound();
+      // Runde/Leg leeren, Spieler bleiben
+      startLegFresh();
     });
 
     startGameBtn.addEventListener("click", () => {
       state.mode = gameModeSelect.value;
-      startRound();
+      startGame();
     });
 
     nextRoundBtn.addEventListener("click", () => {
       if (!state.players.length) return;
-      if (!state.running) state.running = true;
+      if (!state.running) {
+        // Wenn nicht running: starten wir ganz normal
+        startGame();
+        return;
+      }
       nextRound();
     });
 
     resetAllBtn.addEventListener("click", () => {
       if (!confirm("Wirklich alles zurücksetzen? (Spieler bleiben, Runde & Log werden gelöscht)")) return;
-      if (useBackend){
-        // Backend: einfach neues Match anlegen mit aktueller Spielerreihenfolge
-        apiCreateMatch()
-          .then(match => adoptBackend(match, []))
-          .catch(err => alert(err.message || "Reset fehlgeschlagen"));
-      } else {
-        state.running = false;
-        state.throws.length = 0;
-        resetTurnState();
-
-        // Reset mode-specific maps
-        state.atcTargetIndex = {};
-        state.shanghaiPoints = {};
-        state.shanghaiRound = 1;
-
-        // reset scores visually
-        const m = MODES[state.mode];
-        state.players.forEach(p => {
-          if (m.type === "x01"){
-            p.score = m.start;
-            p.startScore = m.start;
-          }
-          p.legs = 0;
-          p.sets = 0;
-        });
-
-        renderAll();
-      }
+      hardResetButKeepPlayers(true);
     });
 
+    clearLocalBtn.addEventListener("click", () => {
+      if (!confirm("Lokale Statistik löschen? (Offline-Modus)")) return;
+      clearLocalState();
+    });
+
+    // Spieler hinzufügen: auch während laufendem oder pausiertem Leg (Offline)
     playerForm.addEventListener("submit", (e) => {
       e.preventDefault();
-      if (state.running){
-        alert("Während einer laufenden Runde keine Spieler hinzufügen. Bitte „Alles zurücksetzen“ oder neue Runde starten.");
-        return;
-      }
+
       if (state.players.length >= MAX_PLAYERS){
         alert("Maximal 10 Spieler.");
         return;
       }
 
-      state.mode = gameModeSelect.value;
-      const m = MODES[state.mode];
+      // Modus nur ändern, wenn Match noch nicht gestartet ist
+      if (!state.matchStarted) state.mode = gameModeSelect.value;
 
-      const name = playerNameInput.value.trim() || `Spieler ${state.players.length + 1}`;
-      const start = (m.type === "x01") ? clampScore(startScoreInput.value, m.start) : 0;
+      // Backend: nach Match-Start nicht erlauben
+      if (useBackend && state.matchStarted){
+        alert("Im Backend-Modus können Spieler nach Match-Start nicht hinzugefügt werden.");
+        return;
+      }
 
-      state.players.push({
+      const name = (playerNameInput.value.trim() || `Spieler ${state.players.length + 1}`);
+      const m = getMode();
+
+      // Startscore-Regel
+      const start = (m.type === "x01")
+        ? (state.matchStarted ? m.start : clampScore(startScoreInput.value, m.start))
+        : 0;
+
+      const newPlayer = {
         id: createId(),
         name,
         score: start,
-        startScore: start,
         legs: 0,
         sets: 0
-      });
+      };
+
+      state.players.push(newPlayer);
+      ensureStats(newPlayer.id);
+
+      // mode-specific init
+      if (m.type === "atc") state.atcTargetIndex[newPlayer.id] = 0;
+      if (m.type === "shanghai") state.shanghaiPoints[newPlayer.id] = 0;
 
       playerNameInput.value = "";
+
+      // currentPlayerIndex NICHT verändern
       renderAll();
+      saveLocalState();
     });
 
-     // -----------------------------
-     // Backend Sync
-     // -----------------------------
-     async function apiGetMatch(){
-       const res = await fetch(`${API_BASE}/api/match`);
-       if (!res.ok) return null;
-       return res.json();
-     }
+    // ============================================================
+    // INIT
+    // ============================================================
+    function init(){
+      state.mode = gameModeSelect.value;
+      renderThrowNumbers();
+      renderAll();
+      renderMultiplierUI();
 
-     async function apiCreateMatch(){
-       const players = state.players.map(p => p.name);
-       const mode = state.mode;
-       const res = await fetch(`${API_BASE}/api/match`, {
-         method:"POST",
-         headers:{ "Content-Type":"application/json" },
-         body: JSON.stringify({ mode, players })
-       });
-       if (!res.ok) throw new Error("Match konnte nicht angelegt werden");
-       return res.json();
-     }
+      if (!useBackend){
+        loadLocalState();
+      } else {
+        // wenn du Backend später willst: hier socket sync rein
+        console.warn("useBackend=true ist aktuell nicht fertig verdrahtet. Stelle useBackend=false.");
+      }
+    }
 
-     async function apiThrow(value, mult){
-       const p = state.players[state.currentPlayerIndex];
-       if (!p) throw new Error("Kein aktiver Spieler");
-       const res = await fetch(`${API_BASE}/api/match/throw`, {
-         method:"POST",
-         headers:{ "Content-Type":"application/json" },
-         body: JSON.stringify({ playerId: p.id, value, mult })
-       });
-       if (!res.ok) throw new Error("Wurf fehlgeschlagen");
-       return res.json();
-     }
-
-     function adoptBackend(match, throwsArr){
-       backendMatch = match;
-       state.mode = match.mode || "501";
-       state.players = (match.players || []).map(p => ({
-         id: p.id,
-         name: p.name,
-         score: p.score,
-         startScore: p.score,
-         legs: p.legs || 0,
-         sets: p.sets || 0,
-       }));
-       state.currentPlayerIndex = match.currentIndex || 0;
-       state.dartsInTurn = 0;
-       state.running = true;
-       state.throws = (throwsArr || []).map(t => ({
-         id: t.id,
-         playerId: t.playerId,
-         num: t.value,
-         mult: t.mult,
-         score: t.score,
-         turn: t.turn,
-         dartInTurn: t.dartInTurn || 1,
-       }));
-       renderAll();
-     }
-
-     function setupSocket(){
-       const socket = io(API_BASE);
-       socket.on("match_state", ({ match, throws }) => adoptBackend(match, throws));
-       socket.on("match_created", (match) => adoptBackend(match, []));
-       socket.on("throw_added", ({ match, entry }) => adoptBackend(match, [...state.throws, {
-         id: entry.id,
-         playerId: entry.playerId,
-         num: entry.value,
-         mult: entry.mult,
-         score: entry.score,
-         turn: entry.turn,
-         dartInTurn: entry.dartInTurn || 1,
-       }]));
-     }
-
-     // -----------------------------
-     // Init
-     // -----------------------------
-     state.mode = gameModeSelect.value;
-     renderThrowNumbers();
-     renderAll();
-
-     if (useBackend) {
-       setupSocket();
-       apiGetMatch().then(data => {
-         if (data) adoptBackend(data.match || data, data.throws || []);
-       }).catch(()=>{});
-     }
+    init();
   </script>
 </body>
 </html>

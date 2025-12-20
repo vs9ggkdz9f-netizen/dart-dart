@@ -1,0 +1,1551 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dart Übersicht</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      color-scheme: light dark;
+      --bg:#4b0f1f;
+      --panel:#56182b;
+      --card:#631d33;
+      --border:#7a2a41;
+      --text:#f7eef2;
+      --muted:#e0c9d4;
+      --accent:#ffd166;
+      --accent-strong:#ff9f1c;
+      font-family:"Inter",system-ui,-apple-system,sans-serif;
+    }
+    body{
+      margin:0;
+      min-height:100vh;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(255,209,102,0.08), transparent 35%),
+        radial-gradient(circle at 80% 0%, rgba(255,159,28,0.08), transparent 40%),
+        var(--bg);
+      color:var(--text);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:32px;
+    }
+    .page{ width:min(1200px,100%); display:grid; gap:24px; }
+    header{ display:flex; align-items:flex-end; justify-content:space-between; gap:12px; }
+    h1{ margin:0; font-size:clamp(26px,3vw,34px); letter-spacing:-0.02em; }
+    .tagline{ color:var(--muted); margin:4px 0 0; font-size:15px; }
+
+    .panel{
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0));
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:18px;
+      box-shadow:0 30px 60px rgba(0,0,0,0.35);
+    }
+
+    button{
+      background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+      color:#3b0f1f;
+      border:none;
+      border-radius:10px;
+      padding:10px 16px;
+      font-weight:700;
+      cursor:pointer;
+      transition: transform .15s ease, filter .15s ease;
+    }
+    button:hover{ transform: translateY(-1px); filter: brightness(1.02); }
+
+    .ghost-btn{
+      background: rgba(255,255,255,0.05);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: all .15s ease;
+    }
+    .ghost-btn:hover{
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(255,209,102,0.12);
+      transform: translateY(-1px);
+    }
+    .danger{
+      border-color:#ef4444;
+      color:#ef4444;
+    }
+    .danger:hover{
+      border-color:#ef4444;
+      color:#ef4444;
+      background: rgba(239,68,68,0.10);
+    }
+
+    .score-card{ display:grid; gap:14px; }
+    .score-header{
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .player-form{ display:flex; gap:8px; flex-wrap:wrap; }
+    input, select{
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      color: var(--text);
+      min-width: 150px;
+    }
+    select{ background: var(--card); }
+
+    .table-wrap{ overflow-x:auto; }
+    table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0 8px;
+      min-width: 560px;
+    }
+    th,td{ padding:10px 8px; text-align:left; }
+    thead{ color:var(--muted); font-weight:600; letter-spacing:.01em; }
+    tbody tr{
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow:hidden;
+    }
+    tbody tr td:first-child{ border-top-left-radius:12px; border-bottom-left-radius:12px; }
+    tbody tr td:last-child{ border-top-right-radius:12px; border-bottom-right-radius:12px; }
+    tbody tr.active-player{
+      outline:2px solid rgba(255,209,102,0.9);
+      outline-offset:-2px;
+      background: rgba(255,209,102,0.08);
+    }
+
+    .action-group{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+    .action-group input{
+      width: 92px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      color: var(--text);
+      min-width: unset;
+    }
+
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      background: rgba(255,209,102,0.14);
+      border: 1px solid var(--accent);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-weight: 700;
+      letter-spacing: .01em;
+    }
+
+    .throw-card{ display:grid; gap:14px; }
+    .throw-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .checkout-box{
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      display:grid;
+      gap:6px;
+      font-size:14px;
+    }
+    .throw-grid{
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(76px, 1fr));
+      gap:10px;
+    }
+    .num-btn{
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 0;
+      color: var(--text);
+      font-weight: 700;
+      letter-spacing: .02em;
+      cursor:pointer;
+      transition: all .15s ease;
+    }
+    .num-btn:hover{ border-color: var(--accent); transform: translateY(-1px); }
+    .num-btn.active{
+      background: rgba(255,209,102,0.18);
+      border-color: var(--accent);
+    }
+
+    .throw-controls{ display:grid; gap:10px; align-items:center; }
+    .multis{ display:flex; gap:8px; flex-wrap:wrap; }
+    .chip-btn{
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-weight: 700;
+      transition: all .15s ease;
+    }
+     .chip-btn:hover{ border-color: var(--accent); transform: translateY(-1px); }
+     .chip-btn.active{
+       border-color: var(--accent);
+       background: rgba(255,209,102,0.16);
+     }
+     .chip-btn[disabled]{ opacity:.35; cursor:not-allowed; transform:none; }
+
+    .muted{ color:var(--muted); }
+    .current-selection{ color:var(--muted); font-size:14px; }
+    .turn-info{ font-size:14px; color:var(--muted); }
+
+    .throw-log{ display:grid; gap:8px; }
+    .throw-entry{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      gap:12px;
+    }
+    .throw-entry .right{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .throw-sep{ border:0; border-top:1px solid var(--border); margin:6px 0; }
+
+    .stats-note{ color:var(--muted); font-size:13px; margin-bottom:8px; }
+
+    /* Celebration */
+    .win-overlay{
+      position:fixed; inset:0;
+      display:grid; place-items:center;
+      pointer-events:none;
+      z-index:999;
+      animation: fade-out 3s ease forwards;
+    }
+    .win-banner{
+      background: rgba(0,0,0,0.35);
+      padding: 16px 22px;
+      border-radius: 14px;
+      border: 1px solid var(--accent);
+      color: var(--text);
+      font-weight: 800;
+      letter-spacing: .03em;
+      backdrop-filter: blur(6px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+    }
+    .confetti-piece{
+      position:fixed;
+      top:-10vh;
+      width:8px; height:14px;
+      background: var(--accent);
+      opacity:.85;
+      border-radius:2px;
+      pointer-events:none;
+      z-index:998;
+      animation: confetti-fall linear forwards;
+    }
+    @keyframes confetti-fall{
+      0%{ transform: translateY(0) rotate(0deg); }
+      100%{ transform: translateY(110vh) rotate(360deg); }
+    }
+    @keyframes fade-out{
+      0%{ opacity:1; }
+      100%{ opacity:0; }
+    }
+
+    .mode-actions{ display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; align-items:center; }
+
+    @media (max-width:700px){
+      body{ padding:12px; }
+      .page{ gap:14px; }
+      table{ min-width:100%; }
+      .score-header{ flex-direction: column; align-items: stretch; }
+      .mode-actions{ width:100%; justify-content:flex-start; }
+      .player-form{ width:100%; }
+      .player-form > *{ flex:1 1 140px; min-width:140px; }
+      .throw-grid{ grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); gap:8px; }
+      .multis{ width:100%; }
+      .multis .chip-btn, .multis .ghost-btn{ flex:1 1 100px; min-width:100px; }
+      button, .ghost-btn{ width:100%; }
+      .checkout-box{ grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div>
+        <h1>Dart Start — schnelle Übersicht</h1>
+        <p class="tagline">Schnelle Erfassung von Würfen, Punkten & Regeln</p>
+      </div>
+    </header>
+
+    <section class="panel score-card">
+      <div class="score-header">
+        <div>
+          <h3 style="margin:0;">Spieler & Spiel</h3>
+          <p class="tagline" style="margin-top:4px;">Bis zu 10 Spieler. Modus wählen, Spieler hinzufügen, dann „Spiel starten“.</p>
+          <p class="muted" id="modeInfo" style="margin:6px 0 0;">Modus: 501 (Double-Out)</p>
+          <div class="mode-actions">
+            <button type="button" class="ghost-btn" id="startGameBtn">Spiel starten</button>
+            <button type="button" class="ghost-btn" id="nextRoundBtn">Neue Runde</button>
+            <button type="button" class="ghost-btn danger" id="resetAllBtn">Alles zurücksetzen</button>
+          </div>
+        </div>
+
+        <form id="playerForm" class="player-form">
+          <select id="gameMode" name="mode" aria-label="Spielmodus">
+            <option value="501" selected>501 (Double-Out)</option>
+            <option value="301">301 (Double-Out)</option>
+            <option value="atc">Around the Clock</option>
+            <option value="shanghai">Shanghai</option>
+          </select>
+          <input id="playerName" name="name" maxlength="18" placeholder="Name (optional)" />
+          <input id="startScore" name="score" type="number" min="0" max="2000" value="501" />
+          <button id="addPlayerBtn" type="submit">Spieler hinzufügen</button>
+        </form>
+      </div>
+
+      <div class="table-wrap">
+        <table aria-label="Spieler Tabelle">
+          <thead>
+            <tr>
+             <th>Name</th>
+             <th>Sets</th>
+             <th>Legs</th>
+             <th>Status</th>
+             <th>Ø</th>
+             <th>Reset/Entfernen</th>
+            </tr>
+          </thead>
+          <tbody id="playerBody">
+            <tr class="empty">
+              <td colspan="6" style="text-align:center; color:var(--muted);">Noch keine Spieler hinzugefügt.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel throw-card">
+      <div class="throw-header">
+        <div>
+          <h3 style="margin:0;">Würfe (1–20 + Bull 25 + 0/Miss)</h3>
+          <p class="tagline" style="margin-top:4px;">Multiplikator wählen → Zahl klicken. (Bull: nur Single/Double)</p>
+        </div>
+        <button id="clearThrows" class="ghost-btn">Runde leeren</button>
+      </div>
+
+      <div class="checkout-box" id="checkoutBox"></div>
+
+      <div class="multis" id="multiButtons" aria-label="Multiplikator">
+        <button type="button" class="chip-btn active" data-mult="1">Single</button>
+        <button type="button" class="chip-btn" data-mult="2">Double</button>
+        <button type="button" class="chip-btn" data-mult="3">Triple</button>
+        <button type="button" class="ghost-btn" id="missBtn">0 (Fehlwurf)</button>
+      </div>
+
+      <div class="current-selection" id="currentSelection">Auswahl: Single</div>
+      <div class="turn-info" id="turnInfo">Aktiver Spieler: –</div>
+
+      <div class="throw-grid" id="throwNumbers"></div>
+
+      <div class="throw-log" id="throwLog">
+        <div class="muted">Noch keine Würfe erfasst.</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3 style="margin:0 0 10px;">Häufige Dart-Regeln</h3>
+      <div style="display:grid; gap:8px; color:var(--muted); font-size:15px; line-height:1.6;">
+        <div><strong style="color:var(--text);">Abstand & Höhe:</strong> Oche 2,37 m zum Board, Bullseye auf 1,73 m Höhe.</div>
+        <div><strong style="color:var(--text);">Wurf:</strong> 3 Darts pro Aufnahme; Oche übertreten = Fehlwurf.</div>
+        <div><strong style="color:var(--text);">Scoring:</strong> Single/Double/Triple; Bull 25, Doppel-Bull 50.</div>
+        <div><strong style="color:var(--text);">Bust (501/301 DO):</strong> Unter 0 oder Rest=1 → Aufnahme zählt nicht.</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+        <div>
+          <h3 style="margin:0;">Statistik je Spieler</h3>
+          <div class="stats-note" id="statsNote">Darts, Singles/Doubles/Triples, Punkte, Ø Punkte/Dart.</div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table aria-label="Statistik">
+          <thead id="statsHead"></thead>
+          <tbody id="statsBody">
+            <tr class="empty">
+              <td style="text-align:center; color:var(--muted);">Noch keine Daten.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // -----------------------------
+    // DOM
+    // -----------------------------
+    const playerForm = document.getElementById("playerForm");
+    const playerNameInput = document.getElementById("playerName");
+    const startScoreInput = document.getElementById("startScore");
+    const playerBody = document.getElementById("playerBody");
+    const gameModeSelect = document.getElementById("gameMode");
+    const modeInfo = document.getElementById("modeInfo");
+
+    const throwNumbers = document.getElementById("throwNumbers");
+    const multiButtons = document.getElementById("multiButtons");
+    const currentSelection = document.getElementById("currentSelection");
+    const missBtn = document.getElementById("missBtn");
+    const throwLog = document.getElementById("throwLog");
+    const clearThrowsBtn = document.getElementById("clearThrows");
+    const startGameBtn = document.getElementById("startGameBtn");
+    const nextRoundBtn = document.getElementById("nextRoundBtn");
+    const resetAllBtn = document.getElementById("resetAllBtn");
+    const turnInfo = document.getElementById("turnInfo");
+    const checkoutBox = document.getElementById("checkoutBox");
+
+    const statsHead = document.getElementById("statsHead");
+    const statsBody = document.getElementById("statsBody");
+    const statsNote = document.getElementById("statsNote");
+
+    // -----------------------------
+    // Helpers
+    // -----------------------------
+    const createId = () => {
+      return (typeof crypto !== "undefined" && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : "id-" + Math.random().toString(16).slice(2);
+    };
+
+    const clampScore = (value, fallback) => {
+      const n = Number(value);
+      return Number.isFinite(n) ? Math.max(0, Math.min(2000, n)) : fallback;
+    };
+
+    const throwNumbersList = [...Array(20).keys()].map(n => n + 1).concat([25]);
+
+    function labelForMultiplier(m) {
+      if (m === 1) return "Single";
+      if (m === 2) return "Double";
+      return "Triple";
+    }
+
+    function computeScore(num, mult) {
+      // Bull: Single=25, Double=50
+      if (num === 25 && mult === 2) return 50;
+      if (num === 25 && mult === 1) return 25;
+      return num * mult;
+    }
+
+    function isValidTriple(num){ return num >= 1 && num <= 20; }
+
+    // -----------------------------
+    // Game modes
+    // -----------------------------
+    const MODES = {
+      "501": { label: "501 (Double-Out)", start: 501, type: "x01" },
+      "301": { label: "301 (Double-Out)", start: 301, type: "x01" },
+      "atc": { label: "Around the Clock", start: 0, type: "atc" },
+      "shanghai": { label: "Shanghai", start: 0, type: "shanghai" }
+    };
+
+    function suggestCheckout(score) {
+      const chart = {
+        170:"T20 T20 Bull", 167:"T20 T19 Bull", 164:"T20 T18 Bull", 161:"T20 T17 Bull",
+        160:"T20 T20 D20", 158:"T20 T20 D19", 157:"T20 T19 D20", 156:"T20 T20 D18",
+        155:"T20 T19 D19", 154:"T20 T18 D20", 153:"T20 T19 D18", 152:"T20 T20 D16",
+        151:"T20 T17 D20", 150:"T20 T18 D18", 149:"T20 T19 D16", 148:"T20 T16 D20",
+        147:"T20 T17 D18", 146:"T20 T18 D16", 145:"T20 T15 D20", 144:"T20 T20 D12",
+        143:"T20 T17 D16", 142:"T20 T14 D20", 141:"T20 T19 D12", 140:"T20 T20 D10",
+        139:"T20 T13 D20", 138:"T20 T18 D12", 137:"T20 T19 D10", 136:"T20 T20 D8",
+        135:"T20 T17 D12", 134:"T20 T14 D16", 133:"T20 T19 D8", 132:"Bull Bull D16",
+        131:"T20 T13 D16", 130:"T20 T20 D5", 129:"T19 T16 D12", 128:"T18 T14 D16",
+        127:"T20 T17 D8", 126:"T19 T19 D6", 125:"T18 T13 D16", 124:"T20 T16 D8",
+        123:"T19 T16 D9", 122:"T18 T20 D4", 121:"T20 T11 D14",
+        120:"T20 S20 D20", 118:"T20 S18 D20", 117:"T20 S17 D20", 116:"T20 S16 D20",
+        115:"T20 S15 D20", 114:"T20 S14 D20", 112:"T20 S12 D20", 110:"T20 S10 D20",
+        108:"T20 S16 D16", 107:"T19 S10 D20", 106:"T20 S6 D20", 105:"T20 S13 D16",
+        104:"T18 S18 D16", 103:"T20 S3 D20", 102:"T20 S10 D16", 101:"T17 S18 D16",
+        100:"T20 D20",
+         99:"T19 S10 D16",  98:"T20 D19",  97:"T19 D20",  96:"T20 D18",
+         95:"T19 D19",  94:"T18 D20",  93:"T19 D18",  92:"T20 D16",
+         91:"T17 D20",  90:"T18 D18",  89:"T19 D16",  88:"T20 D14",
+         87:"T17 D18",  86:"T18 D16",  85:"T15 D20",  84:"T20 D12",
+         83:"T17 D16",  82:"Bull D16", 81:"T19 D12", 80:"T20 D10",
+         78:"T18 D12",  76:"T20 D8",  75:"T17 D12",  74:"T14 D16",
+         72:"T16 D12",  70:"T18 D8",  68:"T16 D10",  66:"T10 D18",
+         65:"T19 D4",   64:"T16 D8",   62:"T10 D16",  60:"S20 D20",
+         58:"S18 D20",  56:"S16 D20",  54:"S14 D20",  52:"S20 D16",
+         50:"S18 D16",  48:"S16 D16",  46:"S14 D16",  44:"S12 D16",
+         42:"S10 D16",  40:"D20", 38:"D19", 36:"D18", 34:"D17", 32:"D16",
+         30:"D15", 28:"D14", 26:"D13", 24:"D12", 22:"D11", 20:"D10",
+         18:"D9", 16:"D8", 14:"D7", 12:"D6", 10:"D5", 8:"D4", 6:"D3", 4:"D2", 2:"D1"
+      };
+      if (score > 170) return "Unter 170 kommen, dann Checkout spielen.";
+      return chart[score] || "Rest stellen (Double-Out beachten).";
+    }
+
+    // -----------------------------
+    // State
+    // -----------------------------
+    const state = {
+      players: [],
+      throws: [], // {id, playerId, num, mult, score, turn, dartInTurn}
+      mode: "501",
+      running: false,
+
+      currentPlayerIndex: 0,
+      dartsInTurn: 0,
+      turnStartSnapshot: null, // für Bust (x01/shanghai turn logic)
+      globalTurnCounter: 1,
+
+      // Mode-specific
+      atcTargetIndex: {}, // playerId -> idx (0..20 where 20 means Bull target)
+      shanghaiRound: 1,    // 1..20
+      shanghaiPoints: {},  // playerId -> points
+    };
+
+    // -----------------------------
+    // Rendering
+    // -----------------------------
+    function renderModeInfo(){
+      const m = MODES[state.mode];
+      modeInfo.textContent = `Modus: ${m.label}`;
+      // Startscore-Feld sinnvoll setzen
+      if (m.type === "x01") startScoreInput.value = m.start;
+      else startScoreInput.value = 0;
+
+      // Mode lock when running
+      gameModeSelect.disabled = state.running;
+      startScoreInput.disabled = state.running;
+    }
+
+    function renderThrowNumbers(){
+      throwNumbers.innerHTML = "";
+      throwNumbersList.forEach(num => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "num-btn";
+        btn.textContent = (num === 25 ? "25 (Bull)" : String(num));
+        btn.addEventListener("click", () => addThrow(num));
+        throwNumbers.appendChild(btn);
+      });
+    }
+
+    function renderTurnInfo(){
+      if (!state.players.length){
+        turnInfo.textContent = "Aktiver Spieler: –";
+        return;
+      }
+      const p = state.players[state.currentPlayerIndex];
+      const dartNo = Math.min(state.dartsInTurn + 1, 3);
+
+      const m = MODES[state.mode];
+      if (m.type === "x01"){
+        turnInfo.textContent = `Aktiver Spieler: ${p.name} — Dart ${dartNo}/3 — Rest: ${p.score}`;
+      } else if (m.type === "atc"){
+        const target = getATCTargetForPlayer(p.id);
+        turnInfo.textContent = `Aktiver Spieler: ${p.name} — Dart ${dartNo}/3 — Ziel: ${target === 25 ? "Bull" : target}`;
+      } else {
+        turnInfo.textContent = `Aktiver Spieler: ${p.name} — Dart ${dartNo}/3 — Runde: ${state.shanghaiRound}`;
+      }
+    }
+
+    function renderCheckoutBox(){
+      const m = MODES[state.mode];
+      if (!state.players.length){
+        checkoutBox.innerHTML = `
+          <div><strong>Aktiver Spieler:</strong> –</div>
+          <div><strong>Info:</strong> –</div>
+        `;
+        return;
+      }
+      const p = state.players[state.currentPlayerIndex];
+
+      if (m.type === "x01"){
+        const dartsLeft = Math.max(0, 3 - state.dartsInTurn);
+        checkoutBox.innerHTML = `
+          <div><strong>Aktiver Spieler:</strong> ${p.name}</div>
+          <div><strong>Rest:</strong> ${p.score}</div>
+          <div><strong>Empfehlung:</strong> ${suggestCheckout(p.score)}</div>
+          <div><strong>Darts übrig (Aufnahme):</strong> ${dartsLeft}</div>
+        `;
+        return;
+      }
+
+      if (m.type === "atc"){
+        const t = getATCTargetForPlayer(p.id);
+        checkoutBox.innerHTML = `
+          <div><strong>Aktiver Spieler:</strong> ${p.name}</div>
+          <div><strong>Ziel:</strong> ${t === 25 ? "Bull" : t}</div>
+          <div class="muted">Treffe die Zahl in Reihenfolge. Bull zählt mit 25 oder 50.</div>
+        `;
+        return;
+      }
+
+      // Shanghai
+      const pts = (state.shanghaiPoints[p.id] != null) ? state.shanghaiPoints[p.id] : 0;
+      checkoutBox.innerHTML = `
+        <div><strong>Aktiver Spieler:</strong> ${p.name}</div>
+        <div><strong>Runde:</strong> ${state.shanghaiRound} / 20</div>
+        <div><strong>Punkte:</strong> ${pts}</div>
+        <div class="muted">Punkte nur, wenn du die Rundenzahl triffst. Shanghai (S+D+T in einer Aufnahme) = Sofort-Sieg.</div>
+      `;
+    }
+
+    function renderPlayers(){
+      playerBody.innerHTML = "";
+      if (!state.players.length){
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td colspan="4" style="text-align:center; color:var(--muted);">Noch keine Spieler hinzugefügt.</td>`;
+        playerBody.appendChild(tr);
+        return;
+      }
+
+      const m = MODES[state.mode];
+      state.players.forEach((p, idx) => {
+        const tr = document.createElement("tr");
+        if (idx === state.currentPlayerIndex) tr.classList.add("active-player");
+
+         const nameTd = document.createElement("td");
+         nameTd.textContent = p.name;
+
+         const setsTd = document.createElement("td");
+         setsTd.innerHTML = `<span class="chip">${p.sets || 0}</span>`;
+
+         const legsTd = document.createElement("td");
+         legsTd.innerHTML = `<span class="chip">${p.legs || 0}</span>`;
+
+         const statusTd = document.createElement("td");
+        if (m.type === "x01"){
+          statusTd.innerHTML = `<span class="chip">${p.score}</span>`;
+        } else if (m.type === "atc"){
+          const t = getATCTargetForPlayer(p.id);
+          const done = (state.atcTargetIndex[p.id] != null) ? state.atcTargetIndex[p.id] : 0;
+          statusTd.innerHTML = `<span class="chip">Ziel: ${t === 25 ? "Bull" : t}</span> <span class="muted">(${done}/21)</span>`;
+        } else {
+          const pts = (state.shanghaiPoints[p.id] != null) ? state.shanghaiPoints[p.id] : 0;
+          statusTd.innerHTML = `<span class="chip">${pts} P</span>`;
+        }
+
+         // Ø Spalte (Punkte/Dart bei x01, sonst „–“)
+         const avgTd = document.createElement("td");
+         let avgDisplay = "–";
+         if (state.throws.length) {
+           const darts = state.throws.filter(t => t.playerId === p.id).length;
+           const points = state.throws.filter(t => t.playerId === p.id).reduce((sum, t) => sum + t.score, 0);
+           if (darts > 0) avgDisplay = (points / darts).toFixed(1);
+         }
+         avgTd.textContent = (m.type === "x01") ? avgDisplay : "–";
+
+        const resetTd = document.createElement("td");
+        const resetWrap = document.createElement("div");
+        resetWrap.className = "action-group";
+
+        const resetBtn = document.createElement("button");
+        resetBtn.type = "button";
+        resetBtn.className = "ghost-btn";
+        resetBtn.textContent = "Reset";
+        resetBtn.addEventListener("click", () => {
+          resetPlayer(p.id);
+          renderAll();
+        });
+
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "ghost-btn danger";
+        removeBtn.textContent = "Entfernen";
+        removeBtn.disabled = state.running; // während Runde keine Spieler löschen
+        removeBtn.addEventListener("click", () => {
+          removePlayer(p.id);
+          renderAll();
+        });
+
+        resetWrap.append(resetBtn, removeBtn);
+        resetTd.appendChild(resetWrap);
+
+         tr.append(nameTd, setsTd, legsTd, statusTd, avgTd, resetTd);
+        playerBody.appendChild(tr);
+      });
+    }
+
+    function renderThrowLog(){
+      throwLog.innerHTML = "";
+      if (!state.throws.length){
+        const empty = document.createElement("div");
+        empty.className = "muted";
+        empty.textContent = "Noch keine Würfe erfasst.";
+        throwLog.appendChild(empty);
+        return;
+      }
+
+      const reversed = [...state.throws].reverse();
+      reversed.forEach((t, revIdx) => {
+        const originalIndex = state.throws.length - 1 - revIdx;
+        const p = state.players.find(x => x.id === t.playerId);
+        const who = p ? p.name : "Unbekannt";
+
+        const row = document.createElement("div");
+        row.className = "throw-entry";
+
+        const left = document.createElement("div");
+        const label = (t.num === 0)
+          ? "Miss 0"
+          : `${labelForMultiplier(t.mult)} ${t.num === 25 ? "Bull" : t.num}`;
+        left.innerHTML = `<div><strong>${label}</strong> = ${t.score} P</div><div class="muted">von ${who} · Turn ${t.turn} · Dart ${t.dartInTurn}</div>`;
+
+        const right = document.createElement("div");
+        right.className = "right";
+
+        const edit = document.createElement("button");
+        edit.type = "button";
+        edit.className = "ghost-btn";
+        edit.textContent = "Ändern";
+        edit.addEventListener("click", () => editThrow(originalIndex));
+
+        const del = document.createElement("button");
+        del.type = "button";
+        del.className = "ghost-btn danger";
+        del.textContent = "Entfernen";
+        del.addEventListener("click", () => {
+          state.throws.splice(originalIndex, 1);
+          recomputeFromThrows();
+          renderAll();
+        });
+
+        right.append(edit, del);
+        row.append(left, right);
+        throwLog.appendChild(row);
+
+        if (revIdx < reversed.length - 1){
+          const hr = document.createElement("hr");
+          hr.className = "throw-sep";
+          throwLog.appendChild(hr);
+        }
+      });
+    }
+
+    function renderStats(){
+      const m = MODES[state.mode];
+
+      if (!state.players.length){
+        statsHead.innerHTML = "";
+        statsBody.innerHTML = `<tr class="empty"><td style="text-align:center; color:var(--muted);">Noch keine Daten.</td></tr>`;
+        return;
+      }
+
+      if (m.type === "x01"){
+        statsNote.textContent = "Darts, Singles/Doubles/Triples, Punkte, Ø Punkte/Dart.";
+        statsHead.innerHTML = `
+          <tr>
+           <th>Name</th><th>Darts</th><th>Singles</th><th>Doubles</th><th>Triples</th><th>Punkte</th><th>Ø</th>
+          </tr>
+        `;
+      } else if (m.type === "atc"){
+        statsNote.textContent = "Darts, Treffer aufs Ziel, Fortschritt (0–21).";
+        statsHead.innerHTML = `
+          <tr>
+            <th>Name</th><th>Darts</th><th>Treffer</th><th>Fortschritt</th><th>Aktuelles Ziel</th>
+          </tr>
+        `;
+      } else {
+        statsNote.textContent = "Darts, Singles/Doubles/Triples (auf Rundenzahlen), Punkte, Ø Punkte/Dart.";
+        statsHead.innerHTML = `
+          <tr>
+            <th>Name</th><th>Darts</th><th>Singles</th><th>Doubles</th><th>Triples</th><th>Punkte</th><th>Ø</th>
+          </tr>
+        `;
+      }
+
+      // Compute
+      const stats = {};
+      state.players.forEach(p => {
+        stats[p.id] = { name:p.name, darts:0, singles:0, doubles:0, triples:0, points:0, hits:0 };
+      });
+
+      state.throws.forEach(t => {
+        const s = stats[t.playerId];
+        if (!s) return;
+        s.darts += 1;
+
+        if (t.mult === 1) s.singles += 1;
+        else if (t.mult === 2) s.doubles += 1;
+        else if (t.mult === 3) s.triples += 1;
+
+        s.points += t.score;
+
+        // ATC hits: zählt nur wenn es ein Ziel-Treffer war (wir setzen hitFlag beim Simulieren)
+        if (t.hitFlag) s.hits += 1;
+      });
+
+      statsBody.innerHTML = "";
+      state.players.forEach(p => {
+        const s = stats[p.id];
+        if (!s) return;
+
+        const tr = document.createElement("tr");
+
+        if (m.type === "x01"){
+          const avg = s.darts ? (s.points / s.darts).toFixed(1) : "0.0";
+          tr.innerHTML = `
+            <td>${s.name}</td>
+            <td>${s.darts}</td>
+            <td>${s.singles}</td>
+            <td>${s.doubles}</td>
+            <td>${s.triples}</td>
+            <td>${s.points}</td>
+            <td>${avg}</td>
+          `;
+        } else if (m.type === "atc"){
+          const prog = (state.atcTargetIndex[p.id] != null) ? state.atcTargetIndex[p.id] : 0;
+          const target = getATCTargetForPlayer(p.id);
+          tr.innerHTML = `
+            <td>${s.name}</td>
+            <td>${s.darts}</td>
+            <td>${s.hits}</td>
+            <td>${prog}/21</td>
+            <td>${target === 25 ? "Bull" : target}</td>
+          `;
+        } else {
+          const pts = (state.shanghaiPoints[p.id] != null) ? state.shanghaiPoints[p.id] : 0;
+          const avg = s.darts ? (pts / s.darts).toFixed(1) : "0.0";
+          tr.innerHTML = `
+            <td>${s.name}</td>
+            <td>${s.darts}</td>
+            <td>${s.singles}</td>
+            <td>${s.doubles}</td>
+            <td>${s.triples}</td>
+            <td>${pts}</td>
+            <td>${avg}</td>
+          `;
+        }
+
+        statsBody.appendChild(tr);
+      });
+
+      if (!statsBody.children.length){
+        statsBody.innerHTML = `<tr class="empty"><td style="text-align:center; color:var(--muted);">Noch keine Daten.</td></tr>`;
+      }
+    }
+
+    function renderAll(){
+      renderModeInfo();
+      renderPlayers();
+      renderTurnInfo();
+      renderCheckoutBox();
+      renderThrowLog();
+      renderStats();
+      renderMultiplierUI();
+    }
+
+    // -----------------------------
+    // Celebration
+    // -----------------------------
+    function triggerWinCelebration(text){
+      const overlay = document.createElement("div");
+      overlay.className = "win-overlay";
+      const banner = document.createElement("div");
+      banner.className = "win-banner";
+      banner.textContent = text;
+      overlay.appendChild(banner);
+      document.body.appendChild(overlay);
+
+      const colors = ["#ffd166","#ff9f1c","#f7eef2","#e0c9d4"];
+      for (let i=0;i<80;i++){
+        const piece = document.createElement("div");
+        piece.className = "confetti-piece";
+        piece.style.left = `${Math.random()*100}vw`;
+        piece.style.background = colors[i % colors.length];
+        const duration = 2 + Math.random()*1.5;
+        const delay = Math.random()*0.2;
+        piece.style.animationDuration = `${duration}s`;
+        piece.style.animationDelay = `${delay}s`;
+        document.body.appendChild(piece);
+        setTimeout(() => piece.remove(), (duration + delay)*1000 + 200);
+      }
+      setTimeout(() => overlay.remove(), 3000);
+    }
+
+    // -----------------------------
+    // Multiplier UI
+    // -----------------------------
+     let selectedMultiplier = 1; // Standard: Single
+
+     function renderMultiplierUI(){
+       multiButtons.querySelectorAll(".chip-btn").forEach(btn => {
+         const mult = Number(btn.dataset.mult);
+         btn.classList.toggle("active", mult === selectedMultiplier);
+       });
+       currentSelection.textContent = `Auswahl: ${labelForMultiplier(selectedMultiplier)}`;
+    }
+
+    multiButtons.addEventListener("click", (e) => {
+      const btn = e.target.closest(".chip-btn");
+      if (!btn) return;
+      const mult = Number(btn.dataset.mult);
+      selectedMultiplier = mult;
+      renderMultiplierUI();
+    });
+
+    // -----------------------------
+    // Player management
+    // -----------------------------
+    const MAX_PLAYERS = 10;
+
+    function removePlayer(playerId){
+      const idx = state.players.findIndex(p => p.id === playerId);
+      if (idx === -1) return;
+      state.players.splice(idx, 1);
+      if (state.currentPlayerIndex >= state.players.length) state.currentPlayerIndex = 0;
+      // cleanup mode maps
+      delete state.atcTargetIndex[playerId];
+      delete state.shanghaiPoints[playerId];
+      // remove throws of player
+      state.throws = state.throws.filter(t => t.playerId !== playerId);
+      recomputeFromThrows();
+    }
+
+    function resetPlayer(playerId){
+      const m = MODES[state.mode];
+      const p = state.players.find(x => x.id === playerId);
+      if (!p) return;
+
+      if (m.type === "x01"){
+        p.score = m.start;
+        p.startScore = m.start;
+      } else if (m.type === "atc"){
+        state.atcTargetIndex[playerId] = 0;
+      } else {
+        state.shanghaiPoints[playerId] = 0;
+        state.shanghaiRound = 1;
+      }
+      // optional: throws bleiben, aber das wäre inkonsistent → wir resetten Runde, wenn man Spieler resetten will
+      state.throws.length = 0;
+      resetTurnState();
+    }
+
+    function resetTurnState(){
+      state.currentPlayerIndex = 0;
+      state.dartsInTurn = 0;
+      state.globalTurnCounter = 1;
+      state.turnStartSnapshot = null;
+    }
+
+    // -----------------------------
+    // Mode mechanics
+    // -----------------------------
+    function getATCTargetForPlayer(playerId){
+      const idx = (state.atcTargetIndex[playerId] != null) ? state.atcTargetIndex[playerId] : 0; // 0..20
+      if (idx <= 19) return idx + 1; // 1..20
+      return 25; // Bull
+    }
+
+    function startRound(){
+      if (!state.players.length){
+        alert("Bitte zuerst Spieler anlegen.");
+        return;
+      }
+
+      state.running = true;
+      state.throws.length = 0;
+      resetTurnState();
+
+      const m = MODES[state.mode];
+
+      if (m.type === "x01"){
+        state.players.forEach(p => {
+          p.score = m.start;
+          p.startScore = m.start;
+        });
+      } else if (m.type === "atc"){
+        state.players.forEach(p => state.atcTargetIndex[p.id] = 0);
+      } else {
+        state.players.forEach(p => state.shanghaiPoints[p.id] = 0);
+        state.shanghaiRound = 1;
+      }
+
+      // Snapshot at turn start
+      state.turnStartSnapshot = snapshotModeStateForCurrentPlayer();
+
+      renderAll();
+    }
+
+    function nextRound(){
+      if (!state.players.length) return;
+
+      // rotate starter
+      state.currentPlayerIndex = (state.currentPlayerIndex + 1) % state.players.length;
+      // move that starter to front
+      const starter = state.players.splice(state.currentPlayerIndex, 1)[0];
+      state.players.unshift(starter);
+
+      startRound();
+    }
+
+    function snapshotModeStateForCurrentPlayer(){
+      const p = state.players[state.currentPlayerIndex];
+      const m = MODES[state.mode];
+
+      if (!p) return null;
+
+      if (m.type === "x01"){
+        return { score: p.score };
+      }
+      if (m.type === "atc"){
+        return { targetIndex: (state.atcTargetIndex[p.id] != null) ? state.atcTargetIndex[p.id] : 0 };
+      }
+      // shanghai
+      return {
+        round: state.shanghaiRound,
+        points: (state.shanghaiPoints[p.id] != null) ? state.shanghaiPoints[p.id] : 0,
+        // for shanghai: which singles/doubles/triples hit this turn for current round
+        s:false, d:false, t:false
+      };
+    }
+
+    function advancePlayer(){
+      state.currentPlayerIndex = (state.currentPlayerIndex + 1) % state.players.length;
+      state.dartsInTurn = 0;
+      state.globalTurnCounter += 1;
+      state.turnStartSnapshot = snapshotModeStateForCurrentPlayer();
+    }
+
+    function endTurn(){
+      advancePlayer();
+
+      // Shanghai: if we just completed a full cycle of players, advance round
+      if (MODES[state.mode].type === "shanghai"){
+        if (state.currentPlayerIndex === 0){
+          state.shanghaiRound += 1;
+          if (state.shanghaiRound > 20){
+            // decide winner
+            const winner = state.players
+              .map(p => ({ p, pts: (state.shanghaiPoints[p.id] != null) ? state.shanghaiPoints[p.id] : 0 }))
+              .sort((a,b) => b.pts - a.pts)[0];
+            triggerWinCelebration(`Shanghai Ende! Gewinner: ${winner.p.name} (${winner.pts} Punkte)`);
+            startRound(); // start new round fresh
+            return;
+          }
+        }
+        // new snapshot for next player
+        state.turnStartSnapshot = snapshotModeStateForCurrentPlayer();
+      }
+    }
+
+    function bustCurrentTurn(){
+      const p = state.players[state.currentPlayerIndex];
+      const snap = state.turnStartSnapshot;
+      const m = MODES[state.mode];
+      if (!p || !snap) return;
+
+      if (m.type === "x01"){
+        p.score = snap.score;
+      }
+      // In x01: turn ends immediately
+      endTurn();
+    }
+
+    function isFinishingDouble(num, mult){
+      // Double bull counts as double
+      if (num === 25 && mult === 2) return true;
+      return mult === 2;
+    }
+
+    // -----------------------------
+    // Core: Add Throw
+    // -----------------------------
+    function addThrow(num){
+      if (!state.players.length){
+        alert("Bitte zuerst Spieler anlegen.");
+        return;
+      }
+      if (!state.running){
+        alert("Bitte erst „Spiel starten“ drücken.");
+        return;
+      }
+
+      // Miss
+      if (num === 0){
+        recordThrow(0, 1);
+        state.dartsInTurn += 1;
+        if (state.dartsInTurn >= 3) endTurn();
+        renderAll();
+        return;
+      }
+
+      // Validate multiplier vs num (default Single)
+      let mult = selectedMultiplier;
+      if (mult === null) mult = 1;
+
+      // Bull: no triple
+      if (num === 25 && mult === 3) mult = 2;
+      // Triple only 1..20
+      if (mult === 3 && !isValidTriple(num)) mult = 2;
+
+      recordThrow(num, mult);
+
+      // Apply mode rules
+      const modeType = MODES[state.mode].type;
+      const p = state.players[state.currentPlayerIndex];
+
+      if (modeType === "x01"){
+        const score = computeScore(num, mult);
+        const newScore = p.score - score;
+
+        // Bust checks
+        if (newScore < 0 || newScore === 1){
+          // turn invalid
+          markLastThrowMeta({ bust: true });
+          bustCurrentTurn();
+          renderAll();
+          return;
+        }
+
+        if (newScore === 0){
+          // must finish on double
+          if (!isFinishingDouble(num, mult)){
+            markLastThrowMeta({ bust: true, finishAttempt: true });
+            bustCurrentTurn();
+            renderAll();
+            return;
+          }
+          // WIN
+           p.legs = (p.legs || 0) + 1;
+           if (p.legs >= 3) {
+             p.sets = (p.sets || 0) + 1;
+             state.players.forEach(pl => pl.legs = 0);
+           }
+          p.score = 0;
+          triggerWinCelebration(`Glückwunsch, ${p.name} hat gewonnen!`);
+          // Winner starts next round
+          state.players = [p, ...state.players.filter(x => x.id !== p.id)];
+          startRound();
+          return;
+        }
+
+        // Normal subtract
+        p.score = newScore;
+
+        state.dartsInTurn += 1;
+        if (state.dartsInTurn >= 3) endTurn();
+        renderAll();
+        selectedMultiplier = 1;
+        selectedNumber = null;
+        renderMultiplierUI();
+        return;
+      }
+
+      if (modeType === "atc"){
+        const target = getATCTargetForPlayer(p.id);
+        let hit = false;
+
+        // Bull target: 25 or 50 counts
+        if (target === 25){
+          if (num === 25) hit = true;
+        } else {
+          if (num === target) hit = true;
+        }
+
+        if (hit){
+          state.atcTargetIndex[p.id] = ((state.atcTargetIndex[p.id] != null) ? state.atcTargetIndex[p.id] : 0) + 1;
+          markLastThrowMeta({ hitFlag: true });
+          // win if completed Bull
+          if (((state.atcTargetIndex[p.id] != null) ? state.atcTargetIndex[p.id] : 0) >= 21){
+            p.legs = (p.legs || 0) + 1;
+            triggerWinCelebration(`ATC: ${p.name} hat gewonnen!`);
+            startRound();
+            return;
+          }
+        }
+
+        state.dartsInTurn += 1;
+        if (state.dartsInTurn >= 3) endTurn();
+        renderAll();
+        selectedMultiplier = 1;
+        selectedNumber = null;
+        renderMultiplierUI();
+        return;
+      }
+
+      // Shanghai
+      if (modeType === "shanghai"){
+        const round = state.shanghaiRound;
+        const score = computeScore(num, mult);
+
+        // Only score if num matches round number (Bull doesn't score)
+        if (num === round){
+          state.shanghaiPoints[p.id] = ((state.shanghaiPoints[p.id] != null) ? state.shanghaiPoints[p.id] : 0) + score;
+
+          // Track S/D/T within THIS turn for Shanghai
+          if (!state.turnStartSnapshot || typeof state.turnStartSnapshot.s !== "boolean"){
+            state.turnStartSnapshot = snapshotModeStateForCurrentPlayer();
+          }
+          if (mult === 1) state.turnStartSnapshot.s = true;
+          if (mult === 2) state.turnStartSnapshot.d = true;
+          if (mult === 3) state.turnStartSnapshot.t = true;
+
+          markLastThrowMeta({ hitFlag: true });
+
+          // Shanghai achieved?
+          if (state.turnStartSnapshot.s && state.turnStartSnapshot.d && state.turnStartSnapshot.t){
+             p.legs = (p.legs || 0) + 1;
+             if (p.legs >= 3) {
+               p.sets = (p.sets || 0) + 1;
+               state.players.forEach(pl => pl.legs = 0);
+             }
+             triggerWinCelebration(`Shanghai! ${p.name} gewinnt in Runde ${round}!`);
+            startRound();
+            return;
+          }
+        }
+
+        state.dartsInTurn += 1;
+        if (state.dartsInTurn >= 3) endTurn();
+        renderAll();
+        selectedMultiplier = 1;
+        selectedNumber = null;
+        renderMultiplierUI();
+        return;
+      }
+    }
+
+    function recordThrow(num, mult){
+      const p = state.players[state.currentPlayerIndex];
+      const score = (num === 0) ? 0 : computeScore(num, mult);
+      state.throws.push({
+        id: createId(),
+        playerId: p.id,
+        num,
+        mult,
+        score,
+        turn: state.globalTurnCounter,
+        dartInTurn: state.dartsInTurn + 1
+      });
+    }
+
+    function markLastThrowMeta(meta){
+      const last = state.throws[state.throws.length - 1];
+      if (!last) return;
+      Object.assign(last, meta);
+    }
+
+    // -----------------------------
+    // Recompute from throws (Edit/Delete)
+    // -----------------------------
+    function recomputeFromThrows(){
+      if (!state.players.length) return;
+
+      const m = MODES[state.mode];
+      // reset base
+      resetTurnState();
+      state.running = true;
+
+      if (m.type === "x01"){
+        state.players.forEach(p => { p.score = m.start; p.startScore = m.start; });
+      } else if (m.type === "atc"){
+        state.players.forEach(p => state.atcTargetIndex[p.id] = 0);
+      } else {
+        state.players.forEach(p => state.shanghaiPoints[p.id] = 0);
+        state.shanghaiRound = 1;
+      }
+
+      state.turnStartSnapshot = snapshotModeStateForCurrentPlayer();
+
+      // simulate in order
+      for (let i=0;i<state.throws.length;i++){
+        const t = state.throws[i];
+        // ensure player exists
+        const playerIndex = state.players.findIndex(p => p.id === t.playerId);
+        if (playerIndex === -1) continue;
+
+        // If log got out of sync, we force the current turn to follow log order by rotating
+        // until current player matches throw's player.
+        while (state.players[state.currentPlayerIndex]?.id !== t.playerId){
+          endTurn();
+        }
+
+        // apply throw similarly, but without re-recording
+        // we also rebuild dartInTurn and turn counters
+        // set these based on current state
+        t.turn = state.globalTurnCounter;
+        t.dartInTurn = state.dartsInTurn + 1;
+
+        // validate multiplier constraints
+        if (t.num === 25 && t.mult === 3) t.mult = 2;
+        if (t.mult === 3 && !isValidTriple(t.num)) t.mult = 2;
+        t.score = (t.num === 0) ? 0 : computeScore(t.num, t.mult);
+
+        // clear meta flags
+        delete t.bust;
+        delete t.finishAttempt;
+        delete t.hitFlag;
+
+        // Now simulate
+        const p = state.players[state.currentPlayerIndex];
+
+        if (m.type === "x01"){
+          const newScore = p.score - t.score;
+
+          if (t.num === 0){
+            state.dartsInTurn += 1;
+            if (state.dartsInTurn >= 3) endTurn();
+            continue;
+          }
+
+          if (newScore < 0 || newScore === 1){
+            t.bust = true;
+            bustCurrentTurn();
+            continue;
+          }
+
+          if (newScore === 0){
+            if (!isFinishingDouble(t.num, t.mult)){
+              t.bust = true;
+              t.finishAttempt = true;
+              bustCurrentTurn();
+              continue;
+            }
+            // Win: restart round (same behavior as live)
+            p.legs = (p.legs || 0) + 1;
+            if (p.legs >= 3) {
+              p.sets = (p.sets || 0) + 1;
+              state.players.forEach(pl => pl.legs = 0);
+            }
+            p.score = 0;
+            // Winner starts next
+            state.players = [p, ...state.players.filter(x => x.id !== p.id)];
+            // reset round and clear remaining throws after win (they are invalid)
+            state.throws = state.throws.slice(0, i + 1);
+            startRound();
+            return;
+          }
+
+          p.score = newScore;
+          state.dartsInTurn += 1;
+          if (state.dartsInTurn >= 3) endTurn();
+          continue;
+        }
+
+        if (m.type === "atc"){
+          if (t.num === 0){
+            state.dartsInTurn += 1;
+            if (state.dartsInTurn >= 3) endTurn();
+            continue;
+          }
+
+          const target = getATCTargetForPlayer(p.id);
+          let hit = false;
+          if (target === 25){
+            if (t.num === 25) hit = true;
+          } else {
+            if (t.num === target) hit = true;
+          }
+
+          if (hit){
+            t.hitFlag = true;
+            state.atcTargetIndex[p.id] = ((state.atcTargetIndex[p.id] != null) ? state.atcTargetIndex[p.id] : 0) + 1;
+            if (((state.atcTargetIndex[p.id] != null) ? state.atcTargetIndex[p.id] : 0) >= 21){
+            // Win: cut throws at i and restart
+            p.legs = (p.legs || 0) + 1;
+            if (p.legs >= 3) {
+              p.sets = (p.sets || 0) + 1;
+              state.players.forEach(pl => pl.legs = 0);
+            }
+            state.throws = state.throws.slice(0, i + 1);
+            startRound();
+            return;
+            }
+          }
+
+          state.dartsInTurn += 1;
+          if (state.dartsInTurn >= 3) endTurn();
+          continue;
+        }
+
+        // Shanghai
+        if (m.type === "shanghai"){
+          const round = state.shanghaiRound;
+
+          if (t.num === 0){
+            state.dartsInTurn += 1;
+            if (state.dartsInTurn >= 3) endTurn();
+            continue;
+          }
+
+          // ensure turn snapshot has s/d/t flags
+          if (!state.turnStartSnapshot || typeof state.turnStartSnapshot.s !== "boolean"){
+            state.turnStartSnapshot = snapshotModeStateForCurrentPlayer();
+          }
+
+          if (t.num === round){
+            t.hitFlag = true;
+            state.shanghaiPoints[p.id] = ((state.shanghaiPoints[p.id] != null) ? state.shanghaiPoints[p.id] : 0) + t.score;
+            if (t.mult === 1) state.turnStartSnapshot.s = true;
+            if (t.mult === 2) state.turnStartSnapshot.d = true;
+            if (t.mult === 3) state.turnStartSnapshot.t = true;
+
+            if (state.turnStartSnapshot.s && state.turnStartSnapshot.d && state.turnStartSnapshot.t){
+              state.throws = state.throws.slice(0, i + 1);
+              startRound();
+              return;
+            }
+          }
+
+          state.dartsInTurn += 1;
+          if (state.dartsInTurn >= 3) endTurn();
+          continue;
+        }
+      }
+
+      renderAll();
+    }
+
+    function editThrow(index){
+      const t = state.throws[index];
+      if (!t) return;
+
+      const newNumStr = prompt("Neue Zahl (0–20 oder 25 für Bull):", String(t.num));
+      if (newNumStr === null) return;
+      const newNum = Number(newNumStr);
+      const allowedNums = [0,25,...Array.from({length:20},(_,i)=>i+1)];
+      if (!Number.isFinite(newNum) || !allowedNums.includes(newNum)){
+        alert("Bitte 0–20 oder 25 eingeben.");
+        return;
+      }
+
+      const newMultStr = prompt("Neuer Multiplikator (1=Single, 2=Double, 3=Triple):", String(t.mult));
+      if (newMultStr === null) return;
+      let newMult = Number(newMultStr);
+      if (![1,2,3].includes(newMult)){
+        alert("Multiplikator 1/2/3 wählen.");
+        return;
+      }
+
+      // constraints
+      if (newNum === 25 && newMult === 3) newMult = 2;
+      if (newMult === 3 && !isValidTriple(newNum)) {
+        alert("Triple nur bei 1–20 erlaubt.");
+        return;
+      }
+
+      t.num = newNum;
+      t.mult = newMult;
+      t.score = (newNum === 0) ? 0 : computeScore(newNum, newMult);
+
+      recomputeFromThrows();
+      renderAll();
+    }
+
+    // -----------------------------
+    // UI Events
+    // -----------------------------
+    gameModeSelect.addEventListener("change", () => {
+      if (state.running){
+        // should not happen due to disabled, but still safe
+        gameModeSelect.value = state.mode;
+        return;
+      }
+      state.mode = gameModeSelect.value;
+      renderAll();
+    });
+
+    missBtn.addEventListener("click", () => addThrow(0));
+
+    clearThrowsBtn.addEventListener("click", () => {
+      if (!state.running) return;
+      // Clear current round and reset to start of round
+      startRound();
+    });
+
+    startGameBtn.addEventListener("click", () => {
+      state.mode = gameModeSelect.value;
+      startRound();
+    });
+
+    nextRoundBtn.addEventListener("click", () => {
+      if (!state.players.length) return;
+      if (!state.running) state.running = true;
+      nextRound();
+    });
+
+    resetAllBtn.addEventListener("click", () => {
+      if (!confirm("Wirklich alles zurücksetzen? (Spieler bleiben, Runde & Log werden gelöscht)")) return;
+      state.running = false;
+      state.throws.length = 0;
+      resetTurnState();
+
+      // Reset mode-specific maps
+      state.atcTargetIndex = {};
+      state.shanghaiPoints = {};
+      state.shanghaiRound = 1;
+
+      // reset scores visually
+      const m = MODES[state.mode];
+      state.players.forEach(p => {
+        if (m.type === "x01"){
+          p.score = m.start;
+          p.startScore = m.start;
+        }
+        p.legs = 0;
+        p.sets = 0;
+      });
+
+      renderAll();
+    });
+
+    playerForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (state.running){
+        alert("Während einer laufenden Runde keine Spieler hinzufügen. Bitte „Alles zurücksetzen“ oder neue Runde starten.");
+        return;
+      }
+      if (state.players.length >= MAX_PLAYERS){
+        alert("Maximal 10 Spieler.");
+        return;
+      }
+
+      state.mode = gameModeSelect.value;
+      const m = MODES[state.mode];
+
+      const name = playerNameInput.value.trim() || `Spieler ${state.players.length + 1}`;
+      const start = (m.type === "x01") ? clampScore(startScoreInput.value, m.start) : 0;
+
+      state.players.push({
+        id: createId(),
+        name,
+        score: start,
+        startScore: start,
+        legs: 0,
+        sets: 0
+      });
+
+      playerNameInput.value = "";
+      renderAll();
+    });
+
+    // -----------------------------
+    // Init
+    // -----------------------------
+    state.mode = gameModeSelect.value;
+    renderThrowNumbers();
+    renderAll();
+  </script>
+</body>
+</html>

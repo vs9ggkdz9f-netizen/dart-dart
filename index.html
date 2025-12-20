@@ -398,6 +398,7 @@
     </section>
   </main>
 
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script>
     // -----------------------------
     // DOM
@@ -426,8 +427,12 @@
     const statsNote = document.getElementById("statsNote");
 
     // -----------------------------
-    // Helpers
+    // Helpers / Backend
     // -----------------------------
+    const API_BASE = "http://localhost:4000";
+    const useBackend = true; // auf false setzen, um rein lokal zu spielen
+    let backendMatch = null;
+
     const createId = () => {
       return (typeof crypto !== "undefined" && crypto.randomUUID)
         ? crypto.randomUUID()
@@ -958,6 +963,14 @@
     }
 
     function startRound(){
+      if (useBackend) {
+        // Backend: Match neu anlegen
+        apiCreateMatch()
+          .then(match => adoptBackend(match, []))
+          .catch(err => alert(err.message || "Backend-Start fehlgeschlagen"));
+        return;
+      }
+
       if (!state.players.length){
         alert("Bitte zuerst Spieler anlegen.");
         return;
@@ -988,6 +1001,13 @@
     }
 
     function nextRound(){
+      if (useBackend){
+        // für Backend: einfach Match neu starten mit gleicher Reihenfolge
+        apiCreateMatch()
+          .then(match => adoptBackend(match, []))
+          .catch(err => alert(err.message || "Neue Runde fehlgeschlagen"));
+        return;
+      }
       if (!state.players.length) return;
 
       // rotate starter
@@ -1071,13 +1091,28 @@
     // -----------------------------
     // Core: Add Throw
     // -----------------------------
-    function addThrow(num){
+    async function addThrow(num){
       if (!state.players.length){
         alert("Bitte zuerst Spieler anlegen.");
         return;
       }
-      if (!state.running){
+      if (!state.running && !useBackend){
         alert("Bitte erst „Spiel starten“ drücken.");
+        return;
+      }
+
+      // Backend: send throw
+      if (useBackend){
+        try {
+          await apiThrow(num, selectedMultiplier || 1);
+          // UI wird durch socket-Event aktualisiert; falls kein Socket, könnten wir fallback adopten
+        } catch (e) {
+          alert(e.message || "Wurf fehlgeschlagen");
+        }
+        // nach Backend-Wurf wieder auf Single
+        selectedMultiplier = 1;
+        selectedNumber = null;
+        renderMultiplierUI();
         return;
       }
 
@@ -1487,27 +1522,34 @@
 
     resetAllBtn.addEventListener("click", () => {
       if (!confirm("Wirklich alles zurücksetzen? (Spieler bleiben, Runde & Log werden gelöscht)")) return;
-      state.running = false;
-      state.throws.length = 0;
-      resetTurnState();
+      if (useBackend){
+        // Backend: einfach neues Match anlegen mit aktueller Spielerreihenfolge
+        apiCreateMatch()
+          .then(match => adoptBackend(match, []))
+          .catch(err => alert(err.message || "Reset fehlgeschlagen"));
+      } else {
+        state.running = false;
+        state.throws.length = 0;
+        resetTurnState();
 
-      // Reset mode-specific maps
-      state.atcTargetIndex = {};
-      state.shanghaiPoints = {};
-      state.shanghaiRound = 1;
+        // Reset mode-specific maps
+        state.atcTargetIndex = {};
+        state.shanghaiPoints = {};
+        state.shanghaiRound = 1;
 
-      // reset scores visually
-      const m = MODES[state.mode];
-      state.players.forEach(p => {
-        if (m.type === "x01"){
-          p.score = m.start;
-          p.startScore = m.start;
-        }
-        p.legs = 0;
-        p.sets = 0;
-      });
+        // reset scores visually
+        const m = MODES[state.mode];
+        state.players.forEach(p => {
+          if (m.type === "x01"){
+            p.score = m.start;
+            p.startScore = m.start;
+          }
+          p.legs = 0;
+          p.sets = 0;
+        });
 
-      renderAll();
+        renderAll();
+      }
     });
 
     playerForm.addEventListener("submit", (e) => {
@@ -1540,12 +1582,93 @@
       renderAll();
     });
 
-    // -----------------------------
-    // Init
-    // -----------------------------
-    state.mode = gameModeSelect.value;
-    renderThrowNumbers();
-    renderAll();
+     // -----------------------------
+     // Backend Sync
+     // -----------------------------
+     async function apiGetMatch(){
+       const res = await fetch(`${API_BASE}/api/match`);
+       if (!res.ok) return null;
+       return res.json();
+     }
+
+     async function apiCreateMatch(){
+       const players = state.players.map(p => p.name);
+       const mode = state.mode;
+       const res = await fetch(`${API_BASE}/api/match`, {
+         method:"POST",
+         headers:{ "Content-Type":"application/json" },
+         body: JSON.stringify({ mode, players })
+       });
+       if (!res.ok) throw new Error("Match konnte nicht angelegt werden");
+       return res.json();
+     }
+
+     async function apiThrow(value, mult){
+       const p = state.players[state.currentPlayerIndex];
+       if (!p) throw new Error("Kein aktiver Spieler");
+       const res = await fetch(`${API_BASE}/api/match/throw`, {
+         method:"POST",
+         headers:{ "Content-Type":"application/json" },
+         body: JSON.stringify({ playerId: p.id, value, mult })
+       });
+       if (!res.ok) throw new Error("Wurf fehlgeschlagen");
+       return res.json();
+     }
+
+     function adoptBackend(match, throwsArr){
+       backendMatch = match;
+       state.mode = match.mode || "501";
+       state.players = (match.players || []).map(p => ({
+         id: p.id,
+         name: p.name,
+         score: p.score,
+         startScore: p.score,
+         legs: p.legs || 0,
+         sets: p.sets || 0,
+       }));
+       state.currentPlayerIndex = match.currentIndex || 0;
+       state.dartsInTurn = 0;
+       state.running = true;
+       state.throws = (throwsArr || []).map(t => ({
+         id: t.id,
+         playerId: t.playerId,
+         num: t.value,
+         mult: t.mult,
+         score: t.score,
+         turn: t.turn,
+         dartInTurn: t.dartInTurn || 1,
+       }));
+       renderAll();
+     }
+
+     function setupSocket(){
+       const socket = io(API_BASE);
+       socket.on("match_state", ({ match, throws }) => adoptBackend(match, throws));
+       socket.on("match_created", (match) => adoptBackend(match, []));
+       socket.on("throw_added", ({ match, entry }) => adoptBackend(match, [...state.throws, {
+         id: entry.id,
+         playerId: entry.playerId,
+         num: entry.value,
+         mult: entry.mult,
+         score: entry.score,
+         turn: entry.turn,
+         dartInTurn: entry.dartInTurn || 1,
+       }]));
+     }
+
+     // -----------------------------
+     // Init
+     // -----------------------------
+     state.mode = gameModeSelect.value;
+     renderThrowNumbers();
+     renderAll();
+
+     if (useBackend) {
+       setupSocket();
+       apiGetMatch().then(data => {
+         if (data) adoptBackend(data.match || data, data.throws || []);
+       }).catch(()=>{});
+     }
   </script>
 </body>
 </html>

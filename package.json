@@ -1,0 +1,26 @@
+{
+  "name": "dart-dart",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vs9ggkdz9f-netizen/dart-dart.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/vs9ggkdz9f-netizen/dart-dart/issues"
+  },
+  "homepage": "https://github.com/vs9ggkdz9f-netizen/dart-dart#readme",
+  "dependencies": {
+    "express": "^5.2.1",
+    "socket.io": "^4.8.1"
+  }
+}

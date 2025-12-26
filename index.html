@@ -553,8 +553,13 @@
     // ============================================================
     // KONFIG
     // ============================================================
-    const API_BASE = "http://localhost:4000";
-    let useBackend = true; // <- TRUE nur, wenn du wirklich Backend/Socket hast.
+    const API_BASE = (() => {
+      // Robust für LAN: immer http + Hostname/IP der aufrufenden Seite, Port 4000
+      const host = (location.hostname && location.hostname !== "") ? location.hostname : "localhost";
+      return `http://${host}:4000`;
+    })();
+    let useBackend = true; // Backend/Sockets für Mehrgeräte im LAN aktiv
+    let backendResyncInterval = null;
     let backendMatchId = null;
     let backendPlayerMap = {}; // localId -> backendId
     let backendSocket = null;
@@ -642,12 +647,22 @@
     const ensureBackendSocket = () => {
       if (!backendEnabled()) return null;
       if (backendSocket) return backendSocket;
-      backendSocket = io(API_BASE);
+      backendSocket = io(API_BASE, { transports:["websocket","polling"] });
       backendSocket.on("connect", () => console.log("Socket verbunden"));
-      backendSocket.on("connect_error", (err) => console.warn("Socket Fehler", err));
+      backendSocket.on("connect_error", (err) => {
+        console.warn("Socket Fehler", err);
+        showToast("Backend nicht erreichbar – versuche erneut...");
+        // nicht deaktivieren; wir resyncen per Polling
+      });
       backendSocket.on("match_state", (payload) => applyBackendState(payload));
       backendSocket.on("match_created", (payload) => applyBackendState(payload));
       backendSocket.on("throw_added", ({ entry, match }) => applyBackendEntry(entry, match));
+      // Polling-Resync alle 3s als Fallback
+      if (!backendResyncInterval){
+        backendResyncInterval = setInterval(() => {
+          if (useBackend) backendLoadMatch();
+        }, 3000);
+      }
       return backendSocket;
     };
 
@@ -693,12 +708,8 @@
 
       if (entry.dartInTurn === 3) maybeTriggerHatz(entry.turn);
 
-      // Stats neu aufbauen
-      state.statsTotals = {};
-      state.players.forEach(pl => ensureStats(pl.id));
-      state.throws.forEach(t => accumulateStats(t.playerId, t.mult, t.score));
-
-      state.turnSnapshot = snapshotTurnForCurrentPlayer();
+      // Vollständige Rekonstruktion damit Scores/Legs/Order konsistent sind
+      recomputeFromThrows();
       renderAll();
       saveLocalState();
     }
@@ -732,20 +743,8 @@
         };
       });
 
-      // Scores/Legs/Sets schon im Match enthalten
-      state.players = state.players.map(p => {
-        const bp = (match.players || []).find(x => x.id === p.id);
-        if (!bp) return p;
-        return { ...p, score: bp.score, legs: bp.legs || 0, sets: bp.sets || 0 };
-      });
-
-      // Stats neu aufbauen
-      state.statsTotals = {};
-      state.players.forEach(pl => ensureStats(pl.id));
-      state.throws.forEach(t => accumulateStats(t.playerId, t.mult, t.score));
-
-      state.turnSnapshot = snapshotTurnForCurrentPlayer();
-
+      // Komplette Rekonstruktion aus Throws mit lokaler Logik
+      recomputeFromThrows();
       renderAll();
       saveLocalState();
     }
@@ -1339,6 +1338,7 @@
       if (num === 0){
         if (useBackend){
           await backendSendThrow(p.id, 0, 1, true);
+          selectedMultiplier = 1; renderMultiplierUI();
         } else {
           recordThrow(p.id, 0, 1);
           state.dartsInTurn += 1;
@@ -1355,6 +1355,7 @@
 
       if (useBackend){
         await backendSendThrow(p.id, num, mult, true);
+        selectedMultiplier = 1; renderMultiplierUI();
         return;
       }
 
@@ -2124,7 +2125,6 @@
 
     toggleLogBtn.addEventListener("click", () => {
       const isCollapsed = throwLog.classList.toggle("collapsed");
-      if (!isCollapsed) throwLog.classList.toggle("compact");
       toggleLogBtn.textContent = isCollapsed ? "Historie anzeigen" : "Historie verbergen";
     });
 
@@ -2213,8 +2213,8 @@
     function init(){
       state.mode = gameModeSelect.value;
       renderThrowNumbers();
-      throwLog.classList.add("collapsed", "compact");
-      toggleLogBtn.textContent = "Historie anzeigen";
+      throwLog.classList.remove("collapsed", "compact");
+      toggleLogBtn.textContent = "Historie verbergen";
       renderAll();
       renderMultiplierUI();
 

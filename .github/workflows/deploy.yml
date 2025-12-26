@@ -1,0 +1,29 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::314420430476:role/dart-dart-role
+          aws-region: eu-central-1
+
+      - name: Debug identity
+        run: aws sts get-caller-identity
+
+      - name: Deploy
+        run: aws s3 cp index.html s3://dart-game231312

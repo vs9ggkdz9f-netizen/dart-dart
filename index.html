@@ -12,22 +12,23 @@
   <style>
     :root{
       color-scheme: light dark;
-      --bg:#4b0f1f;
-      --panel:#56182b;
-      --card:#631d33;
-      --border:#7a2a41;
-      --text:#f7eef2;
-      --muted:#e0c9d4;
-      --accent:#ffd166;
-      --accent-strong:#ff9f1c;
+      /* Dunkelgrünes Schema */
+      --bg:#0f2a1f;
+      --panel:#123527;
+      --card:#15402f;
+      --border:#1f5640;
+      --text:#e9f5ee;
+      --muted:#c3d9ce;
+      --accent:#7df9c6;       /* frisches Türkisgrün als Akzent */
+      --accent-strong:#4fd6a5;
       font-family:"Inter",system-ui,-apple-system,sans-serif;
     }
     body{
       margin:0;
       min-height:100vh;
       background:
-        radial-gradient(circle at 20% 20%, rgba(255,209,102,0.08), transparent 35%),
-        radial-gradient(circle at 80% 0%, rgba(255,159,28,0.08), transparent 40%),
+        radial-gradient(circle at 20% 20%, rgba(125,249,198,0.10), transparent 35%),
+        radial-gradient(circle at 80% 0%, rgba(79,214,165,0.10), transparent 40%),
         var(--bg);
       color:var(--text);
       display:flex;
@@ -36,33 +37,35 @@
       padding:32px;
     }
     .page{ width:min(1200px,100%); display:grid; gap:24px; }
-    header{ display:flex; align-items:flex-end; justify-content:space-between; gap:12px; }
+    header{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; text-align:center; }
     h1{ margin:0; font-size:clamp(26px,3vw,34px); letter-spacing:-0.02em; }
     .tagline{ color:var(--muted); margin:4px 0 0; font-size:15px; }
 
     .panel{
-      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0));
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0));
       border:1px solid var(--border);
-      border-radius:16px;
+      border-radius:18px;
       padding:18px;
-      box-shadow:0 30px 60px rgba(0,0,0,0.35);
+      box-shadow:0 24px 60px rgba(0,0,0,0.35);
+      backdrop-filter: blur(6px);
     }
 
     button{
       background: linear-gradient(135deg, var(--accent), var(--accent-strong));
-      color:#3b0f1f;
+      color:#1b0c12;
       border:none;
-      border-radius:10px;
+      border-radius:12px;
       padding:10px 16px;
       font-weight:700;
       cursor:pointer;
-      transition: transform .15s ease, filter .15s ease;
+      transition: transform .15s ease, filter .15s ease, box-shadow .15s ease;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     }
-    button:hover{ transform: translateY(-1px); filter: brightness(1.02); }
+    button:hover{ transform: translateY(-1px); filter: brightness(1.03); box-shadow:0 14px 34px rgba(0,0,0,0.35); }
     button[disabled]{ opacity:.45; cursor:not-allowed; transform:none; filter:none; }
 
     .ghost-btn{
-      background: rgba(255,255,255,0.05);
+      background: rgba(255,255,255,0.06);
       color: var(--text);
       border: 1px solid var(--border);
       border-radius: 10px;
@@ -73,10 +76,11 @@
     .ghost-btn:hover{
       border-color: var(--accent);
       color: var(--accent);
-      background: rgba(255,209,102,0.12);
+      background: rgba(255,209,102,0.14);
       transform: translateY(-1px);
     }
     .ghost-btn[disabled]{ opacity:.35; cursor:not-allowed; transform:none; }
+    .ghost-compact{ padding:6px 10px; font-size:13px; }
     .danger{
       border-color:#ef4444;
       color:#ef4444;
@@ -107,26 +111,102 @@
     select{ background: var(--card); }
 
     .table-wrap{ overflow-x:auto; }
-    table{
+    .table-wrap table{
       width:100%;
       border-collapse:separate;
-      border-spacing:0 8px;
-      min-width: 560px;
+      border-spacing:0;
+      min-width: 420px;
     }
-    th,td{ padding:10px 8px; text-align:left; }
-    thead{ color:var(--muted); font-weight:600; letter-spacing:.01em; }
-    tbody tr{
+    .table-wrap th, .table-wrap td{
+      padding:10px 8px;
+      text-align:left;
+      border-bottom:1px solid rgba(255,255,255,0.08);
+      font-size:14px;
+    }
+    .table-wrap thead{ color:var(--muted); font-weight:600; letter-spacing:.01em; }
+
+    /* Player Cards */
+    .player-grid{
+      display:grid;
+      gap:12px;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      margin-top:12px;
+    }
+    .player-card{
       background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      overflow:hidden;
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:14px;
+      box-shadow:0 16px 40px rgba(0,0,0,0.35);
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
     }
-    tbody tr td:first-child{ border-top-left-radius:12px; border-bottom-left-radius:12px; }
-    tbody tr td:last-child{ border-top-right-radius:12px; border-bottom-right-radius:12px; }
-    tbody tr.active-player{
-      outline:2px solid rgba(255,209,102,0.9);
-      outline-offset:-2px;
-      background: rgba(255,209,102,0.08);
+    .player-card:hover{
+      transform: translateY(-2px);
+      box-shadow:0 20px 44px rgba(0,0,0,0.4);
+    }
+    .player-card.active-player{
+      border-color: rgba(255,209,102,0.9);
+      box-shadow:0 24px 50px rgba(255,209,102,0.18);
+      background: linear-gradient(180deg, rgba(255,209,102,0.08), rgba(255,209,102,0.03));
+    }
+    .player-top{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+    }
+    .crown{
+      font-size:14px;
+      line-height:1;
+      opacity:0.8;
+      min-width:16px;
+      text-align:left;
+    }
+    .player-name{
+      font-weight:700;
+      font-size:16px;
+      color:var(--text);
+    }
+    .player-meta{
+      display:flex;
+      gap:6px;
+      flex-wrap:wrap;
+    }
+    .big-score{
+      font-size:clamp(26px, 5vw, 34px);
+      font-weight:800;
+      letter-spacing:-0.02em;
+      color:var(--text);
+      margin:0;
+    }
+    .meta-row{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      color:var(--muted);
+      font-size:13px;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:6px 10px;
+      border-radius:999px;
+      background: rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.1);
+      color:var(--text);
+      font-weight:600;
+      font-size:12px;
+    }
+    .player-actions{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:auto;
     }
 
     .action-group{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
@@ -205,20 +285,53 @@
       background: rgba(255,209,102,0.16);
     }
 
+    /* Toast */
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom:24px;
+      transform:translateX(-50%);
+      background: rgba(0,0,0,0.75);
+      color:var(--text);
+      padding:12px 16px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,0.12);
+      box-shadow:0 14px 32px rgba(0,0,0,0.45);
+      z-index:999;
+      animation: fade-in .2s ease, fade-out .3s ease 2.5s forwards;
+      pointer-events:none;
+      font-weight:700;
+      letter-spacing:0.01em;
+    }
+    .toast.pop{
+      animation: pop .22s ease, fade-out .3s ease 2.5s forwards;
+    }
+
     .muted{ color:var(--muted); }
     .current-selection{ color:var(--muted); font-size:14px; }
     .turn-info{ font-size:14px; color:var(--muted); }
 
-    .throw-log{ display:grid; gap:8px; }
+    .throw-actions{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+      align-items:center;
+    }
+
+    .throw-log{ display:grid; gap:8px; transition:max-height .2s ease; }
+    .throw-log.collapsed{ display:none; }
     .throw-entry{
       display:flex;
       justify-content:space-between;
       align-items:center;
       background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 10px;
+      border-radius: 12px;
       padding: 10px 12px;
       gap:12px;
+      box-shadow:0 10px 24px rgba(0,0,0,0.25);
+      animation: fade-in .18s ease;
     }
     .throw-entry .right{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
     .throw-sep{ border:0; border-top:1px solid var(--border); margin:6px 0; }
@@ -263,17 +376,33 @@
       0%{ opacity:1; }
       100%{ opacity:0; }
     }
+    @keyframes fade-in{
+      0%{ opacity:0; transform: translateY(6px); }
+      100%{ opacity:1; transform: translateY(0); }
+    }
+    @keyframes pop{
+      0%{ transform: translateX(-50%) scale(0.85); opacity:0; }
+      70%{ transform: translateX(-50%) scale(1.05); opacity:1; }
+      100%{ transform: translateX(-50%) scale(1); opacity:1; }
+    }
 
     .mode-actions{ display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; align-items:center; }
 
     @media (max-width:700px){
       body{ padding:12px; }
       .page{ gap:14px; }
-      table{ min-width:100%; }
       .score-header{ flex-direction: column; align-items: stretch; }
       .mode-actions{ width:100%; justify-content:flex-start; }
       .player-form{ width:100%; }
       .player-form > *{ flex:1 1 140px; min-width:140px; }
+      .player-grid{ grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+      .throw-card{
+        position:sticky;
+        bottom:0;
+        z-index:10;
+        border-radius:18px 18px 0 0;
+        box-shadow: 0 -8px 30px rgba(0,0,0,0.45);
+      }
       .throw-grid{ grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); gap:8px; }
       .multis{ width:100%; }
       .multis .chip-btn, .multis .ghost-btn{ flex:1 1 100px; min-width:100px; }
@@ -285,7 +414,7 @@
 
 <body>
   <main class="page">
-    <header>
+    <header style="text-align:center;">
       <div>
         <h1>Doppel-Dart</h1>
         <p class="tagline">Schnelle Erfassung von Würfen & Punkten</p>
@@ -319,24 +448,8 @@
         </form>
       </div>
 
-      <div class="table-wrap">
-        <table aria-label="Spieler Tabelle">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Sets</th>
-              <th>Legs</th>
-              <th>Status</th>
-              <th>Ø</th>
-              <th>Reset/Entfernen</th>
-            </tr>
-          </thead>
-          <tbody id="playerBody">
-            <tr class="empty">
-              <td colspan="6" style="text-align:center; color:var(--muted);">Noch keine Spieler hinzugefügt.</td>
-            </tr>
-          </tbody>
-        </table>
+      <div id="playerBody" class="player-grid">
+        <div class="empty muted">Noch keine Spieler hinzugefügt.</div>
       </div>
     </section>
 
@@ -346,7 +459,10 @@
           <h3 style="margin:0;">Würfe (1–20 + Bull 25 + 0/Miss)</h3>
           <p class="tagline" style="margin-top:4px;">Multiplikator wählen → Zahl klicken. (Bull: nur Single/Double)</p>
         </div>
-        <button id="clearThrows" class="ghost-btn">Runde leeren</button>
+        <div class="throw-actions">
+          <button id="toggleLogBtn" class="ghost-btn ghost-compact">Historie ein/aus</button>
+          <button id="clearThrows" class="ghost-btn">Runde leeren</button>
+        </div>
       </div>
 
       <div class="checkout-box" id="checkoutBox"></div>
@@ -396,10 +512,14 @@
     // KONFIG
     // ============================================================
     const API_BASE = "http://localhost:4000";
-    let useBackend = false; // <- TRUE nur, wenn du wirklich Backend/Socket hast.
+    let useBackend = true; // <- TRUE nur, wenn du wirklich Backend/Socket hast.
+    let backendMatchId = null;
+    let backendPlayerMap = {}; // localId -> backendId
+    let backendSocket = null;
 
     const LOCAL_KEY = "dart-local-state-v2";
     const MAX_PLAYERS = 10;
+    let lastHatzTurn = null; // Merker für 26 (20/1/5) pro Aufnahme
 
     const MODES = {
       "501": { label: "501 (Double-Out)", start: 501, type: "x01" },
@@ -425,6 +545,7 @@
     const currentSelection = document.getElementById("currentSelection");
     const missBtn = document.getElementById("missBtn");
     const throwLog = document.getElementById("throwLog");
+    const toggleLogBtn = document.getElementById("toggleLogBtn");
     const clearThrowsBtn = document.getElementById("clearThrows");
     const startGameBtn = document.getElementById("startGameBtn");
     const nextRoundBtn = document.getElementById("nextRoundBtn");
@@ -473,6 +594,154 @@
         : "id-" + Math.random().toString(16).slice(2);
     };
 
+    const backendEnabled = () => useBackend && typeof io !== "undefined";
+
+    const ensureBackendSocket = () => {
+      if (!backendEnabled()) return null;
+      if (backendSocket) return backendSocket;
+      backendSocket = io(API_BASE);
+      backendSocket.on("connect", () => console.log("Socket verbunden"));
+      backendSocket.on("connect_error", (err) => console.warn("Socket Fehler", err));
+      backendSocket.on("match_state", (payload) => applyBackendState(payload));
+      backendSocket.on("match_created", (payload) => applyBackendState(payload));
+      backendSocket.on("throw_added", ({ entry, match }) => applyBackendEntry(entry, match));
+      return backendSocket;
+    };
+
+    function mapBackendPlayers(backendPlayers){
+      // Backend ist Quelle der Wahrheit für IDs/Scores/Legs/Sets
+      const mapped = backendPlayers.map((bp) => ({
+        id: bp.id,
+        name: bp.name,
+        score: bp.score,
+        legs: bp.legs || 0,
+        sets: bp.sets || 0
+      }));
+      backendPlayerMap = {}; // nicht mehr nötig, aber leeren
+      state.players = mapped;
+    }
+
+    function applyBackendEntry(entry, match){
+      if (!entry || !match) return;
+      backendMatchId = match.id || backendMatchId;
+      mapBackendPlayers(match.players || []);
+      state.currentPlayerIndex = match.currentIndex || 0;
+      state.running = true;
+      state.legEnded = false;
+
+      // dedupe by entry.id
+      if (!state.throws.some(t => t.id === entry.id)){
+        const dartInTurn = (() => {
+          const sameTurn = state.throws.filter(t => t.turn === entry.turn && t.playerId === entry.playerId).length;
+          return sameTurn + 1;
+        })();
+        state.throws.push({
+          id: entry.id,
+          playerId: entry.playerId,
+          num: entry.value,
+          mult: entry.mult,
+          score: entry.score,
+          turn: entry.turn,
+          dartInTurn
+        });
+      }
+
+      // Stats neu aufbauen
+      state.statsTotals = {};
+      state.players.forEach(pl => ensureStats(pl.id));
+      state.throws.forEach(t => accumulateStats(t.playerId, t.mult, t.score));
+
+      renderAll();
+      saveLocalState();
+    }
+
+    function applyBackendState(payload){
+      if (!payload) return;
+      const match = payload.match || payload;
+      if (!match) return;
+      backendMatchId = match.id || backendMatchId;
+      mapBackendPlayers(match.players || []);
+      state.currentPlayerIndex = match.currentIndex || 0;
+      state.running = true;
+      state.legEnded = false;
+
+      const backendThrows = payload.throws || [];
+      state.throws = backendThrows.map((e, idx) => {
+        const dartInTurn = (() => {
+          const before = backendThrows.slice(0, idx).filter(t => t.turn === e.turn && t.playerId === e.playerId).length;
+          return before + 1;
+        })();
+        return {
+          id: e.id || createId(),
+          playerId: e.playerId,
+          num: e.value,
+          mult: e.mult,
+          score: e.score,
+          turn: e.turn,
+          dartInTurn
+        };
+      });
+
+      // Scores/Legs/Sets schon im Match enthalten
+      state.players = state.players.map(p => {
+        const bp = (match.players || []).find(x => x.id === p.id);
+        if (!bp) return p;
+        return { ...p, score: bp.score, legs: bp.legs || 0, sets: bp.sets || 0 };
+      });
+
+      // Stats neu aufbauen
+      state.statsTotals = {};
+      state.players.forEach(pl => ensureStats(pl.id));
+      state.throws.forEach(t => accumulateStats(t.playerId, t.mult, t.score));
+
+      // dartsInTurn abschätzen (vereinfachend 0)
+      state.dartsInTurn = 0;
+
+      renderAll();
+      saveLocalState();
+    }
+
+    async function backendCreateMatch(){
+      if (!backendEnabled()) return;
+      try{
+        const res = await fetch(`${API_BASE}/api/match`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode: state.mode, players: state.players.map(p => p.name) })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        backendMatchId = data.id || data.match?.id || null;
+        const backendPlayers = data.players || data.match?.players || [];
+        if (backendPlayers.length) mapBackendPlayers(backendPlayers);
+        ensureBackendSocket();
+        applyBackendState(data);
+      } catch (err){
+        console.warn("Backend-Match konnte nicht erstellt werden:", err);
+        showToast("Backend nicht erreichbar – spiele lokal weiter.");
+      }
+    }
+
+    async function backendSendThrow(localPlayerId, num, mult, apply = false){
+      if (!backendEnabled() || !backendMatchId) return null;
+      const backendPlayerId = localPlayerId; // IDs sind identisch zu Backend
+      try{
+        const res = await fetch(`${API_BASE}/api/match/throw`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ playerId: backendPlayerId, value: num, mult })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (apply && data) applyBackendEntry(data.entry, data.match);
+        return data;
+      } catch (err){
+        console.warn("Backend-Throw fehlgeschlagen:", err);
+        showToast("Backend nicht erreichbar – Wurf nur lokal.");
+        return null;
+      }
+    }
+
     const clampScore = (value, fallback) => {
       const n = Number(value);
       return Number.isFinite(n) ? Math.max(0, Math.min(2000, n)) : fallback;
@@ -497,6 +766,17 @@
       return mult === 2;
     }
 
+    function showToast(message, extraClass = ""){
+      const toast = document.createElement("div");
+      toast.className = "toast";
+      if (extraClass) toast.classList.add(extraClass);
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+
     function getMode(){ return MODES[state.mode]; }
 
     function getATCTargetForPlayer(playerId){
@@ -505,40 +785,59 @@
       return 25; // Bull
     }
 
+    // Checkout-Empfehlung für Double-Out (x01), max. 3 Darts, endet immer auf Double.
     function suggestCheckout(score) {
-      const chart = {
-        170:"T20 T20 Bull", 167:"T20 T19 Bull", 164:"T20 T18 Bull", 161:"T20 T17 Bull",
-        160:"T20 T20 D20", 158:"T20 T20 D19", 157:"T20 T19 D20", 156:"T20 T20 D18",
-        155:"T20 T19 D19", 154:"T20 T18 D20", 153:"T20 T19 D18", 152:"T20 T20 D16",
-        151:"T20 T17 D20", 150:"T20 T18 D18", 149:"T20 T19 D16", 148:"T20 T16 D20",
-        147:"T20 T17 D18", 146:"T20 T18 D16", 145:"T20 T15 D20", 144:"T20 T20 D12",
-        143:"T20 T17 D16", 142:"T20 T14 D20", 141:"T20 T19 D12", 140:"T20 T20 D10",
-        139:"T20 T13 D20", 138:"T20 T18 D12", 137:"T20 T19 D10", 136:"T20 T20 D8",
-        135:"T20 T17 D12", 134:"T20 T14 D16", 133:"T20 T19 D8", 132:"Bull Bull D16",
-        131:"T20 T13 D16", 130:"T20 T20 D5", 129:"T19 T16 D12", 128:"T18 T14 D16",
-        127:"T20 T17 D8", 126:"T19 T19 D6", 125:"T18 T13 D16", 124:"T20 T16 D8",
-        123:"T19 T16 D9", 122:"T18 T20 D4", 121:"T20 T11 D14",
-        120:"T20 S20 D20", 118:"T20 S18 D20", 117:"T20 S17 D20", 116:"T20 S16 D20",
-        115:"T20 S15 D20", 114:"T20 S14 D20", 112:"T20 S12 D20", 110:"T20 S10 D20",
-        108:"T20 S16 D16", 107:"T19 S10 D20", 106:"T20 S6 D20", 105:"T20 S13 D16",
-        104:"T18 S18 D16", 103:"T20 S3 D20", 102:"T20 S10 D16", 101:"T17 S18 D16",
-        100:"T20 D20",
-         99:"T19 S10 D16",  98:"T20 D19",  97:"T19 D20",  96:"T20 D18",
-         95:"T19 D19",  94:"T18 D20",  93:"T19 D18",  92:"T20 D16",
-         91:"T17 D20",  90:"T18 D18",  89:"T19 D16",  88:"T20 D14",
-         87:"T17 D18",  86:"T18 D16",  85:"T15 D20",  84:"T20 D12",
-         83:"T17 D16",  82:"Bull D16", 81:"T19 D12", 80:"T20 D10",
-         78:"T18 D12",  76:"T20 D8",  75:"T17 D12",  74:"T14 D16",
-         72:"T16 D12",  70:"T18 D8",  68:"T16 D10",  66:"T10 D18",
-         65:"T19 D4",   64:"T16 D8",   62:"T10 D16",  60:"S20 D20",
-         58:"S18 D20",  56:"S16 D20",  54:"S14 D20",  52:"S20 D16",
-         50:"S18 D16",  48:"S16 D16",  46:"S14 D16",  44:"S12 D16",
-         42:"S10 D16",  40:"D20", 38:"D19", 36:"D18", 34:"D17", 32:"D16",
-         30:"D15", 28:"D14", 26:"D13", 24:"D12", 22:"D11", 20:"D10",
-         18:"D9", 16:"D8", 14:"D7", 12:"D6", 10:"D5", 8:"D4", 6:"D3", 4:"D2", 2:"D1"
-      };
+      // Nicht checkbare Restwerte in 3 Darts (DO-Regel)
+      const impossible = new Set([169, 168, 166, 165, 163, 162, 159]);
       if (score > 170) return "Unter 170 kommen, dann Checkout spielen.";
-      return chart[score] || "Rest stellen (Double-Out beachten).";
+      if (impossible.has(score)) return "Kein Checkout möglich";
+      if (score === 0) return "Ausgecheckt!";
+
+      // Bevorzugt hohe Felder (T20/T19) und bekannte Routen; immer Double zum Schluss.
+      const chart = {
+        170:"T20, T20, D25",
+        167:"T20, T19, D25", 164:"T20, T18, D25", 161:"T20, T17, D25",
+        160:"T20, T20, D20", 158:"T20, T20, D19", 157:"T20, T19, D20", 156:"T20, T20, D18",
+        155:"T20, T19, D19", 154:"T20, T18, D20", 153:"T20, T19, D18", 152:"T20, T20, D16",
+        151:"T20, T17, D20", 150:"T20, T18, D18", 149:"T20, T19, D16", 148:"T20, T16, D20",
+        147:"T20, T17, D18", 146:"T20, T18, D16", 145:"T20, T15, D20", 144:"T20, T20, D12",
+        143:"T20, T17, D16", 142:"T20, T14, D20", 141:"T20, T19, D12", 140:"T20, T20, D10",
+        139:"T20, T13, D20", 138:"T20, T18, D12", 137:"T20, T19, D10", 136:"T20, T20, D8",
+        135:"T20, T17, D12", 134:"T20, T14, D16", 133:"T20, T19, D8",  132:"T20, T16, D12",
+        131:"T20, T13, D16", 130:"T20, T20, D5",  129:"T19, T16, D12", 128:"T18, T14, D16",
+        127:"T20, T17, D8",  126:"T19, T19, D6",  125:"T18, T13, D16", 124:"T20, T16, D8",
+        123:"T19, T16, D9",  122:"T18, T20, D4",  121:"T20, T11, D14",
+        120:"T20, S20, D20", 119:"T19, T12, D13", 118:"T20, S18, D20", 117:"T20, S17, D20",
+        116:"T20, S16, D20", 115:"T20, S15, D20", 114:"T20, S14, D20", 113:"T20, S13, D20",
+        112:"T20, S12, D20", 111:"T20, S19, D16", 110:"T20, S10, D20", 109:"T20, S9, D20",
+        108:"T20, S16, D16", 107:"T19, S10, D20", 106:"T20, S6, D20",  105:"T20, S13, D16",
+        104:"T18, S18, D16", 103:"T20, S3, D20",  102:"T20, S10, D16", 101:"T17, S18, D16",
+        100:"T20, D20",
+         99:"T19, S10, D16",  98:"T20, D19",  97:"T19, D20",  96:"T20, D18",
+         95:"T19, D19",  94:"T18, D20",  93:"T19, D18",  92:"T20, D16",
+         91:"T17, D20",  90:"T18, D18",  89:"T19, D16",  88:"T16, D20",
+         87:"T17, D18",  86:"T18, D16",  85:"T15, D20",  84:"T20, D12",
+         83:"T17, D16",  82:"Bull, D16",  81:"T19, D12",  80:"T20, D10",
+         79:"T19, D11",  78:"T18, D12",  77:"T19, D10",  76:"T20, D8",
+         75:"T17, D12",  74:"T14, D16",  73:"T19, D8",   72:"T16, D12",
+         71:"T13, D16",  70:"T18, D8",   69:"T19, D6",   68:"T20, D4",
+         67:"T17, D8",   66:"T10, D18",  65:"T15, D10",  64:"T16, D8",
+         63:"T13, D12",  62:"T10, D16",  61:"T15, D8",   60:"S20, D20",
+         59:"S19, D20",  58:"S18, D20",  57:"S17, D20",  56:"S16, D20",
+         55:"S15, D20",  54:"S14, D20",  53:"S13, D20",  52:"S20, D16",
+         51:"S19, D16",  50:"D25",       49:"S17, D16",  48:"S16, D16",
+         47:"S15, D16",  46:"S6, D20",   45:"S13, D16",  44:"S12, D16",
+         43:"S11, D16",  42:"S10, D16",  41:"S9, D16",   40:"D20",
+         38:"D19", 36:"D18", 34:"D17", 32:"D16", 30:"D15", 28:"D14", 26:"D13",
+         24:"D12", 22:"D11", 20:"D10", 18:"D9", 16:"D8", 14:"D7", 12:"D6", 10:"D5",
+          8:"D4", 6:"D3", 4:"D2", 2:"D1"
+      };
+
+      // Fallback: gerade Rest ≤ 40 → direktes Double.
+      if (chart[score]) return chart[score];
+      if (score <= 40 && score % 2 === 0) return `D${score / 2}`;
+
+      return "Kein Checkout möglich";
     }
 
     // ============================================================
@@ -604,6 +903,22 @@
       if (useBackend) return;
       localStorage.removeItem(LOCAL_KEY);
       hardResetButKeepPlayers(false);
+    }
+
+    async function backendLoadMatch(){
+      if (!backendEnabled()) return;
+      try{
+        const res = await fetch(`${API_BASE}/api/match`);
+        if (!res.ok){
+          if (res.status !== 404) console.warn("Backend Match GET HTTP", res.status);
+          return;
+        }
+        const data = await res.json();
+        applyBackendState(data);
+        ensureBackendSocket();
+      } catch (err){
+        console.warn("Backend Match GET Fehler:", err);
+      }
     }
 
     // ============================================================
@@ -823,11 +1138,7 @@
       saveLocalState();
     }
 
-    function startGame(){
-      if (useBackend){
-        alert("Backend-Modus: Start/Sync bitte über dein Backend lösen (hier Offline-Start). Setze useBackend=false.");
-        return;
-      }
+    async function startGame(){
       if (!state.players.length){
         alert("Bitte zuerst Spieler anlegen.");
         return;
@@ -835,20 +1146,28 @@
 
       state.mode = gameModeSelect.value;
 
+      if (useBackend){
+        if (!backendMatchId){
+          await backendCreateMatch();
+        } else {
+          await backendLoadMatch(); // aktuellen Stand holen
+        }
+      }
+
       // Wenn Match schon gestartet war und nur pausiert ist (legEnded), starten wir das nächste Leg:
       startLegFresh();
     }
 
-    function nextRound(){
-      if (useBackend){
-        alert("Backend-Modus: Neue Runde bitte serverseitig starten.");
-        return;
-      }
+    async function nextRound(){
       if (!state.players.length) return;
 
       // Starter rotieren: erster Spieler ans Ende
       const first = state.players.shift();
       state.players.push(first);
+
+      if (useBackend && !backendMatchId){
+        await backendCreateMatch();
+      }
 
       startLegFresh();
     }
@@ -930,6 +1249,18 @@
       };
       state.throws.push(entry);
       accumulateStats(playerId, mult, score);
+      // Easter-Egg: 26 Punkte (20,1,5 in beliebiger Reihenfolge, alles Single) einmal pro Aufnahme
+      const turnEntries = state.throws.filter(t => t.turn === state.globalTurnCounter);
+      const isHatz = (() => {
+        if (lastHatzTurn === state.globalTurnCounter) return false;
+        if (turnEntries.length !== 3) return false; // genau eine 3-Dart-Aufnahme
+        const sum = turnEntries.reduce((s,t)=>s+t.score,0);
+        return sum === 26; // unabhängig von Zahlen/Multis, Hauptsache Gesamt 26
+      })();
+      if (isHatz){
+        lastHatzTurn = state.globalTurnCounter;
+        showToast("Hatz gschmeckt, Kerle!");
+      }
       return entry;
     }
 
@@ -947,20 +1278,19 @@
         return;
       }
 
-      if (useBackend){
-        alert("Backend-Modus ist hier nicht implementiert (useBackend=false empfohlen).");
-        return;
-      }
-
       const p = state.players[state.currentPlayerIndex];
       const m = getMode();
 
       // Miss
       if (num === 0){
-        recordThrow(p.id, 0, 1);
-        state.dartsInTurn += 1;
-        if (state.dartsInTurn >= 3) endTurn();
-        renderAll(); saveLocalState();
+        if (useBackend){
+          await backendSendThrow(p.id, 0, 1, true);
+        } else {
+          recordThrow(p.id, 0, 1);
+          state.dartsInTurn += 1;
+          if (state.dartsInTurn >= 3) endTurn();
+          renderAll(); saveLocalState();
+        }
         return;
       }
 
@@ -968,6 +1298,11 @@
       let mult = selectedMultiplier || 1;
       if (num === 25 && mult === 3) mult = 2;
       if (mult === 3 && !isValidTriple(num)) mult = 2;
+
+      if (useBackend){
+        await backendSendThrow(p.id, num, mult, true);
+        return;
+      }
 
       const entry = recordThrow(p.id, num, mult);
 
@@ -1403,57 +1738,88 @@
       playerBody.innerHTML = "";
 
       if (!state.players.length){
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td colspan="6" style="text-align:center; color:var(--muted);">Noch keine Spieler hinzugefügt.</td>`;
-        playerBody.appendChild(tr);
+        const empty = document.createElement("div");
+        empty.className = "empty muted";
+        empty.textContent = "Noch keine Spieler hinzugefügt.";
+        playerBody.appendChild(empty);
         return;
       }
 
       const m = getMode();
+      // Best-/Worst-Bestimmung anhand gescorter Punkte (erst ab Runde 2)
+      let bestId = null, worstId = null, bestPts = -Infinity, worstPts = Infinity;
+      if (state.globalTurnCounter > 1){
+        state.players.forEach(p => {
+          const pts = state.statsTotals[p.id]?.points || 0;
+          if (pts > bestPts){ bestPts = pts; bestId = p.id; }
+          if (pts < worstPts){ worstPts = pts; worstId = p.id; }
+        });
+      }
+      // Bei Gleichstand oder Runde 1 keine Krone/Larry
+      const tieAll = bestPts === worstPts;
+      if (tieAll || state.globalTurnCounter <= 1){ bestId = null; worstId = null; }
 
       state.players.forEach((p, idx) => {
-        const tr = document.createElement("tr");
-        if (state.running && idx === state.currentPlayerIndex) tr.classList.add("active-player");
+        const card = document.createElement("div");
+        card.className = "player-card";
+        if (state.running && idx === state.currentPlayerIndex) card.classList.add("active-player");
 
-        const nameTd = document.createElement("td");
-        nameTd.textContent = p.name;
+        const top = document.createElement("div");
+        top.className = "player-top";
+        const crown = document.createElement("div");
+        crown.className = "crown";
+        // jetzt umgekehrt: Krone für besten Spieler
+        if (!tieAll && p.id === bestId) crown.textContent = "👑";
+        const nameEl = document.createElement("div");
+        nameEl.className = "player-name";
+        // Larry-Titel für schlechtesten Spieler
+        nameEl.textContent = (!tieAll && p.id === worstId) ? `${p.name} Larry` : p.name;
+        const meta = document.createElement("div");
+        meta.className = "player-meta";
+        meta.innerHTML = `
+          <span class="pill">Sets: ${p.sets || 0}</span>
+          <span class="pill">Legs: ${p.legs || 0}</span>
+        `;
+        top.append(crown, nameEl, meta);
 
-        const setsTd = document.createElement("td");
-        setsTd.innerHTML = `<span class="chip">${p.sets || 0}</span>`;
+        const playerTurns = new Set(state.throws.filter(t => t.playerId === p.id).map(t => t.turn));
+        const bestScore = state.throws.filter(t => t.playerId === p.id).reduce((m, t) => Math.max(m, t.score), 0);
+        const darts = state.throws.filter(t => t.playerId === p.id).length;
+        const points = state.throws.filter(t => t.playerId === p.id).reduce((sum, t) => sum + t.score, 0);
+        // X01-Average: (Gesamtpunkte / Darts) * 3 (3-Dart-Average). Misses zählen als 0.
+        const avg = (m.type === "x01")
+          ? (darts > 0 ? ((points / darts) * 3).toFixed(1) : "0.0")
+          : "–";
 
-        const legsTd = document.createElement("td");
-        legsTd.innerHTML = `<span class="chip">${p.legs || 0}</span>`;
+        const statusMain = (() => {
+          if (m.type === "x01") return `${p.score}`;
+          if (m.type === "atc") {
+            const t = getATCTargetForPlayer(p.id);
+            return `Ziel: ${t === 25 ? "Bull" : t}`;
+          }
+          return `${state.shanghaiPoints[p.id] ?? 0} P`;
+        })();
 
-        const statusTd = document.createElement("td");
-        if (m.type === "x01"){
-          statusTd.innerHTML = `<span class="chip">${p.score}</span>`;
-        } else if (m.type === "atc"){
-          const t = getATCTargetForPlayer(p.id);
-          const done = state.atcTargetIndex[p.id] ?? 0;
-          statusTd.innerHTML = `<span class="chip">Ziel: ${t === 25 ? "Bull" : t}</span> <span class="muted">(${done}/21)</span>`;
-        } else {
-          const pts = state.shanghaiPoints[p.id] ?? 0;
-          statusTd.innerHTML = `<span class="chip">${pts} P</span>`;
-        }
+        const d1Club = (m.type === "x01" && p.score === 2) ? `<span class="pill">D1er CLUB</span>` : "";
 
-        const avgTd = document.createElement("td");
-        let avg = "–";
-        if (m.type === "x01"){
-          const darts = state.throws.filter(t => t.playerId === p.id).length;
-          const points = state.throws.filter(t => t.playerId === p.id).reduce((sum, t) => sum + t.score, 0);
-          avg = darts > 0 ? (points / darts).toFixed(1) : "0.0";
-        }
-        avgTd.textContent = (m.type === "x01") ? avg : "–";
+        const scoreBlock = document.createElement("div");
+        scoreBlock.innerHTML = `
+          <div class="big-score">${statusMain}</div>
+          <div class="meta-row">
+            <span class="pill">Ø ${avg}</span>
+            <span class="pill">Runden ${playerTurns.size}</span>
+            <span class="pill">Best ${bestScore}</span>
+            <span class="pill">${darts} Darts</span>
+            ${d1Club}
+          </div>
+        `;
 
-        const actionsTd = document.createElement("td");
-        const wrap = document.createElement("div");
-        wrap.className = "action-group";
-
+        const actions = document.createElement("div");
+        actions.className = "player-actions";
         const resetBtn = document.createElement("button");
         resetBtn.type = "button";
         resetBtn.className = "ghost-btn";
         resetBtn.textContent = "Reset";
-        // WICHTIG: während running NICHT resetten dürfen (dein Wunsch)
         resetBtn.disabled = state.running;
         resetBtn.title = state.running ? "Während eines laufenden Spiels gesperrt." : "";
         resetBtn.addEventListener("click", () => {
@@ -1466,7 +1832,6 @@
         removeBtn.type = "button";
         removeBtn.className = "ghost-btn danger";
         removeBtn.textContent = "Entfernen";
-        // WICHTIG: während running NICHT entfernen dürfen
         removeBtn.disabled = state.running;
         removeBtn.title = state.running ? "Während eines laufenden Spiels gesperrt." : "";
         removeBtn.addEventListener("click", () => {
@@ -1475,11 +1840,10 @@
           renderAll(); saveLocalState();
         });
 
-        wrap.append(resetBtn, removeBtn);
-        actionsTd.appendChild(wrap);
+        actions.append(resetBtn, removeBtn);
 
-        tr.append(nameTd, setsTd, legsTd, statusTd, avgTd, actionsTd);
-        playerBody.appendChild(tr);
+        card.append(top, scoreBlock, actions);
+        playerBody.appendChild(card);
       });
     }
 
@@ -1590,7 +1954,8 @@
         const tr = document.createElement("tr");
 
         if (m.type === "x01"){
-          const avg = s.darts ? (s.points / s.darts).toFixed(1) : "0.0";
+          // 3-Dart-Average: (Gesamtpunkte / Darts) * 3. Misses zählen als 0.
+          const avg = s.darts ? ((s.points / s.darts) * 3).toFixed(1) : "0.0";
           tr.innerHTML = `
             <td>${p.name}</td>
             <td>${s.darts}</td>
@@ -1653,6 +2018,11 @@
     });
 
     missBtn.addEventListener("click", () => addThrow(0));
+
+    toggleLogBtn.addEventListener("click", () => {
+      throwLog.classList.toggle("collapsed");
+      toggleLogBtn.textContent = throwLog.classList.contains("collapsed") ? "Historie anzeigen" : "Historie verbergen";
+    });
 
     clearThrowsBtn.addEventListener("click", () => {
       if (!state.running) return;
@@ -1745,8 +2115,8 @@
       if (!useBackend){
         loadLocalState();
       } else {
-        // wenn du Backend später willst: hier socket sync rein
-        console.warn("useBackend=true ist aktuell nicht fertig verdrahtet. Stelle useBackend=false.");
+        ensureBackendSocket();
+        backendLoadMatch();
       }
     }
 

@@ -708,8 +708,12 @@
 
       if (entry.dartInTurn === 3) maybeTriggerHatz(entry.turn);
 
-      // Vollständige Rekonstruktion damit Scores/Legs/Order konsistent sind
-      recomputeFromThrows();
+      // Stats neu aufbauen ohne Neu-Simulation (Backend ist Quelle der Wahrheit)
+      state.statsTotals = {};
+      state.players.forEach(pl => ensureStats(pl.id));
+      state.throws.forEach(t => accumulateStats(t.playerId, t.mult, t.score));
+      state.turnSnapshot = snapshotTurnForCurrentPlayer();
+
       renderAll();
       saveLocalState();
     }
@@ -743,8 +747,12 @@
         };
       });
 
-      // Komplette Rekonstruktion aus Throws mit lokaler Logik
-      recomputeFromThrows();
+      // Stats neu aufbauen ohne Neu-Simulation (Backend ist Quelle der Wahrheit)
+      state.statsTotals = {};
+      state.players.forEach(pl => ensureStats(pl.id));
+      state.throws.forEach(t => accumulateStats(t.playerId, t.mult, t.score));
+      state.turnSnapshot = snapshotTurnForCurrentPlayer();
+
       renderAll();
       saveLocalState();
     }

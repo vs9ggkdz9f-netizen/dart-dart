@@ -241,14 +241,49 @@
       gap:10px;
       flex-wrap:wrap;
     }
+    .checkout-wrap{
+      position:sticky;
+      top:12px;
+      z-index:9;
+    }
     .checkout-box{
-      background: rgba(255,255,255,0.04);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 10px 12px;
+      background: linear-gradient(135deg, rgba(255,209,102,0.08), rgba(255,255,255,0.04));
+      border: 1px solid var(--accent);
+      border-radius: 14px;
+      padding: 16px 18px;
       display:grid;
-      gap:6px;
-      font-size:14px;
+      gap:10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    }
+    .checkout-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      font-size:13px;
+      letter-spacing: .02em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .checkout-main{
+      font-size: 28px;
+      line-height: 1.2;
+      font-weight: 800;
+      color: #ffe7a6;
+    }
+    .checkout-meta{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      font-size:13px;
+      color: var(--muted);
+    }
+    .checkout-badge{
+      border:1px solid rgba(255,255,255,0.24);
+      padding:4px 8px;
+      border-radius: 999px;
+      font-weight:700;
     }
     .throw-grid{
       display:grid;
@@ -289,22 +324,25 @@
     .toast{
       position:fixed;
       left:50%;
-      bottom:24px;
-      transform:translateX(-50%);
-      background: rgba(0,0,0,0.75);
+      top:50%;
+      transform:translate(-50%, -46%);
+      background: rgba(0,0,0,0.82);
       color:var(--text);
-      padding:12px 16px;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,0.12);
-      box-shadow:0 14px 32px rgba(0,0,0,0.45);
+      padding:14px 18px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,0.14);
+      box-shadow:0 18px 36px rgba(0,0,0,0.5);
       z-index:999;
-      animation: fade-in .2s ease, fade-out .3s ease 2.5s forwards;
       pointer-events:none;
-      font-weight:700;
+      font-weight:800;
       letter-spacing:0.01em;
+      font-size:50px;
+      opacity:0;
+      transition: opacity .2s ease, transform .2s ease;
     }
-    .toast.pop{
-      animation: pop .22s ease, fade-out .3s ease 2.5s forwards;
+    .toast.visible{
+      opacity:1;
+      transform:translate(-50%, -50%);
     }
 
     .muted{ color:var(--muted); }
@@ -321,6 +359,8 @@
 
     .throw-log{ display:grid; gap:8px; transition:max-height .2s ease; }
     .throw-log.collapsed{ display:none; }
+    .throw-log.compact .throw-entry:nth-of-type(n+6),
+    .throw-log.compact .throw-sep:nth-of-type(n+6){ display:none; }
     .throw-entry{
       display:flex;
       justify-content:space-between;
@@ -460,12 +500,14 @@
           <p class="tagline" style="margin-top:4px;">Multiplikator wählen → Zahl klicken. (Bull: nur Single/Double)</p>
         </div>
         <div class="throw-actions">
-          <button id="toggleLogBtn" class="ghost-btn ghost-compact">Historie ein/aus</button>
+          <button id="toggleLogBtn" class="ghost-btn ghost-compact">Historie anzeigen</button>
           <button id="clearThrows" class="ghost-btn">Runde leeren</button>
         </div>
       </div>
 
-      <div class="checkout-box" id="checkoutBox"></div>
+      <div class="checkout-wrap">
+        <div class="checkout-box" id="checkoutBox"></div>
+      </div>
 
       <div class="multis" id="multiButtons" aria-label="Multiplikator">
         <button type="button" class="chip-btn active" data-mult="1">Single</button>
@@ -520,6 +562,7 @@
     const LOCAL_KEY = "dart-local-state-v2";
     const MAX_PLAYERS = 10;
     let lastHatzTurn = null; // Merker für 26 (20/1/5) pro Aufnahme
+    let suppressHatzToast = false; // wird bei Re-Simulation deaktiviert
 
     const MODES = {
       "501": { label: "501 (Double-Out)", start: 501, type: "x01" },
@@ -647,6 +690,8 @@
           dartInTurn
         });
       }
+
+      if (entry.dartInTurn === 3) maybeTriggerHatz(entry.turn);
 
       // Stats neu aufbauen
       state.statsTotals = {};
@@ -776,9 +821,23 @@
       if (extraClass) toast.classList.add(extraClass);
       toast.textContent = message;
       document.body.appendChild(toast);
-      setTimeout(() => {
-        toast.remove();
-      }, 3000);
+      requestAnimationFrame(() => toast.classList.add("visible"));
+      const VISIBLE_MS = 10000;
+      setTimeout(() => toast.classList.remove("visible"), VISIBLE_MS);
+      setTimeout(() => toast.remove(), VISIBLE_MS + 800);
+    }
+
+    function maybeTriggerHatz(turnNumber){
+      if (suppressHatzToast) return;
+      if (lastHatzTurn === turnNumber) return;
+      const entries = state.throws.filter(t => t.turn === turnNumber);
+      if (entries.length < 3) return; // klassische 3-Dart-Aufnahme
+      if (entries.some(t => t.bust)) return; // Bust-Turn zählt nicht
+      const sum = entries.reduce((s,t)=>s+t.score,0);
+      if (sum === 26){
+        lastHatzTurn = turnNumber;
+        showToast("Hat's Gschmeckt?");
+      }
     }
 
     function getMode(){ return MODES[state.mode]; }
@@ -1073,6 +1132,8 @@
     }
 
     function endTurn(){
+      const turnNumber = state.globalTurnCounter;
+      maybeTriggerHatz(turnNumber);
       const m = getMode();
       advancePlayer();
 
@@ -1112,6 +1173,7 @@
       state.matchStarted = true;
       state.running = true;
       state.legEnded = false;
+      lastHatzTurn = null; // Hatz-Toast für neues Leg zurücksetzen
 
       // Leg-Log leeren (Stats bleiben über Match erhalten)
       state.throws.length = 0;
@@ -1253,18 +1315,6 @@
       };
       state.throws.push(entry);
       accumulateStats(playerId, mult, score);
-      // Easter-Egg: 26 Punkte (20,1,5 in beliebiger Reihenfolge, alles Single) einmal pro Aufnahme
-      const turnEntries = state.throws.filter(t => t.turn === state.globalTurnCounter);
-      const isHatz = (() => {
-        if (lastHatzTurn === state.globalTurnCounter) return false;
-        if (turnEntries.length !== 3) return false; // genau eine 3-Dart-Aufnahme
-        const sum = turnEntries.reduce((s,t)=>s+t.score,0);
-        return sum === 26; // unabhängig von Zahlen/Multis, Hauptsache Gesamt 26
-      })();
-      if (isHatz){
-        lastHatzTurn = state.globalTurnCounter;
-        showToast("Hatz gschmeckt, Kerle!");
-      }
       return entry;
     }
 
@@ -1336,6 +1386,7 @@
           }
 
           // WIN
+          maybeTriggerHatz(state.globalTurnCounter);
           p.legs = (p.legs || 0) + 1;
           if (p.legs >= 3){
             p.sets = (p.sets || 0) + 1;
@@ -1469,168 +1520,174 @@
     }
 
     function recomputeFromThrows(){
-      // Re-simulate everything from the current throw list (offline)
-      if (!state.players.length) return;
+      const prevSuppress = suppressHatzToast;
+      suppressHatzToast = true; // keine Toasts beim Re-Sim
+      try {
+        // Re-simulate everything from the current throw list (offline)
+        if (!state.players.length) return;
 
-      const m = getMode();
+        const m = getMode();
 
-      // Keep players and their legs/sets, but recompute scores/points/progress from scratch within current leg
-      // (Throws are only for the current leg anyway in this UI)
-      const legsSets = state.players.map(p => ({ id:p.id, legs:p.legs||0, sets:p.sets||0, name:p.name }));
-      const preservedPlayers = [...state.players];
+        // Keep players and their legs/sets, but recompute scores/points/progress from scratch within current leg
+        // (Throws are only for the current leg anyway in this UI)
+        const legsSets = state.players.map(p => ({ id:p.id, legs:p.legs||0, sets:p.sets||0, name:p.name }));
+        const preservedPlayers = [...state.players];
 
-      // Reset core
-      state.statsTotals = {};
-      preservedPlayers.forEach(p => ensureStats(p.id));
+        // Reset core
+        state.statsTotals = {};
+        preservedPlayers.forEach(p => ensureStats(p.id));
 
-      state.currentPlayerIndex = 0;
-      state.dartsInTurn = 0;
-      state.globalTurnCounter = 1;
-      state.turnSnapshot = null;
-      state.running = true;
+        state.currentPlayerIndex = 0;
+        state.dartsInTurn = 0;
+        state.globalTurnCounter = 1;
+        state.turnSnapshot = null;
+        state.running = true;
 
-      // Mode-specific reset
-      if (m.type === "x01"){
-        preservedPlayers.forEach(p => p.score = m.start);
-      }
-      if (m.type === "atc"){
-        state.atcTargetIndex = {};
-        preservedPlayers.forEach(p => state.atcTargetIndex[p.id] = 0);
-      }
-      if (m.type === "shanghai"){
-        state.shanghaiRound = 1;
-        state.shanghaiPoints = {};
-        preservedPlayers.forEach(p => state.shanghaiPoints[p.id] = 0);
-      }
-
-      // Restore legs/sets
-      preservedPlayers.forEach(p => {
-        const ls = legsSets.find(x => x.id === p.id);
-        if (ls){ p.legs = ls.legs; p.sets = ls.sets; }
-      });
-
-      state.players = preservedPlayers;
-      state.turnSnapshot = snapshotTurnForCurrentPlayer();
-
-      // Rebuild throws by simulating their order
-      const originalThrows = [...state.throws];
-      state.throws = [];
-
-      for (let i=0; i<originalThrows.length; i++){
-        const t = originalThrows[i];
-        const playerIndex = state.players.findIndex(p => p.id === t.playerId);
-        if (playerIndex === -1) continue;
-
-        // Rotate until current player matches t.playerId
-        while (state.players[state.currentPlayerIndex]?.id !== t.playerId){
-          endTurn();
+        // Mode-specific reset
+        if (m.type === "x01"){
+          preservedPlayers.forEach(p => p.score = m.start);
+        }
+        if (m.type === "atc"){
+          state.atcTargetIndex = {};
+          preservedPlayers.forEach(p => state.atcTargetIndex[p.id] = 0);
+        }
+        if (m.type === "shanghai"){
+          state.shanghaiRound = 1;
+          state.shanghaiPoints = {};
+          preservedPlayers.forEach(p => state.shanghaiPoints[p.id] = 0);
         }
 
-        // Record same throw (re-normalize)
-        const entry = recordThrow(t.playerId, t.num, t.mult);
+        // Restore legs/sets
+        preservedPlayers.forEach(p => {
+          const ls = legsSets.find(x => x.id === p.id);
+          if (ls){ p.legs = ls.legs; p.sets = ls.sets; }
+        });
 
-        // Copy intent (then we re-calc flags below)
-        // Apply mode logic
-        const p = state.players[state.currentPlayerIndex];
+        state.players = preservedPlayers;
+        state.turnSnapshot = snapshotTurnForCurrentPlayer();
 
-        if (m.type === "x01"){
-          if (!state.turnSnapshot) state.turnSnapshot = snapshotTurnForCurrentPlayer();
+        // Rebuild throws by simulating their order
+        const originalThrows = [...state.throws];
+        state.throws = [];
 
-          if (entry.num === 0){
-            state.dartsInTurn += 1;
-            if (state.dartsInTurn >= 3) endTurn();
-            continue;
+        for (let i=0; i<originalThrows.length; i++){
+          const t = originalThrows[i];
+          const playerIndex = state.players.findIndex(p => p.id === t.playerId);
+          if (playerIndex === -1) continue;
+
+          // Rotate until current player matches t.playerId
+          while (state.players[state.currentPlayerIndex]?.id !== t.playerId){
+            endTurn();
           }
 
-          const newScore = p.score - entry.score;
+          // Record same throw (re-normalize)
+          const entry = recordThrow(t.playerId, t.num, t.mult);
 
-          if (newScore < 0 || newScore === 1){
-            entry.bust = true;
-            bustCurrentTurn();
-            continue;
-          }
+          // Copy intent (then we re-calc flags below)
+          // Apply mode logic
+          const p = state.players[state.currentPlayerIndex];
 
-          if (newScore === 0){
-            if (!isFinishingDouble(entry.num, entry.mult)){
+          if (m.type === "x01"){
+            if (!state.turnSnapshot) state.turnSnapshot = snapshotTurnForCurrentPlayer();
+
+            if (entry.num === 0){
+              state.dartsInTurn += 1;
+              if (state.dartsInTurn >= 3) endTurn();
+              continue;
+            }
+
+            const newScore = p.score - entry.score;
+
+            if (newScore < 0 || newScore === 1){
               entry.bust = true;
-              entry.finishAttempt = true;
               bustCurrentTurn();
               continue;
             }
-            // Win: we stop here (everything after is invalid for that leg)
-            p.legs = (p.legs || 0) + 1;
-            if (p.legs >= 3){
-              p.sets = (p.sets || 0) + 1;
-              state.players.forEach(pl => pl.legs = 0);
-            }
-            state.players = [p, ...state.players.filter(x => x.id !== p.id)];
-            // After win, leg restarts (clear all throws)
-            startLegFresh();
-            return;
-          }
 
-          p.score = newScore;
-          state.dartsInTurn += 1;
-          if (state.dartsInTurn >= 3) endTurn();
-          continue;
-        }
-
-        if (m.type === "atc"){
-          if (entry.num === 0){
-            state.dartsInTurn += 1;
-            if (state.dartsInTurn >= 3) endTurn();
-            continue;
-          }
-          const target = getATCTargetForPlayer(p.id);
-          const hit = (target === 25) ? (entry.num === 25) : (entry.num === target);
-
-          if (hit){
-            entry.hitFlag = true;
-            state.atcTargetIndex[p.id] = (state.atcTargetIndex[p.id] ?? 0) + 1;
-            if ((state.atcTargetIndex[p.id] ?? 0) >= 21){
+            if (newScore === 0){
+              if (!isFinishingDouble(entry.num, entry.mult)){
+                entry.bust = true;
+                entry.finishAttempt = true;
+                bustCurrentTurn();
+                continue;
+              }
+              // Win: we stop here (everything after is invalid for that leg)
               p.legs = (p.legs || 0) + 1;
+              if (p.legs >= 3){
+                p.sets = (p.sets || 0) + 1;
+                state.players.forEach(pl => pl.legs = 0);
+              }
+              state.players = [p, ...state.players.filter(x => x.id !== p.id)];
+              // After win, leg restarts (clear all throws)
               startLegFresh();
               return;
             }
-          }
 
-          state.dartsInTurn += 1;
-          if (state.dartsInTurn >= 3) endTurn();
-          continue;
-        }
-
-        // Shanghai
-        if (m.type === "shanghai"){
-          if (!state.turnSnapshot || typeof state.turnSnapshot.s !== "boolean"){
-            state.turnSnapshot = snapshotTurnForCurrentPlayer();
-          }
-
-          const round = state.shanghaiRound;
-
-          if (entry.num === 0){
+            p.score = newScore;
             state.dartsInTurn += 1;
             if (state.dartsInTurn >= 3) endTurn();
             continue;
           }
 
-          if (entry.num === round){
-            entry.hitFlag = true;
-            state.shanghaiPoints[p.id] = (state.shanghaiPoints[p.id] ?? 0) + entry.score;
-
-            if (entry.mult === 1) state.turnSnapshot.s = true;
-            if (entry.mult === 2) state.turnSnapshot.d = true;
-            if (entry.mult === 3) state.turnSnapshot.t = true;
-
-            if (state.turnSnapshot.s && state.turnSnapshot.d && state.turnSnapshot.t){
-              startLegFresh();
-              return;
+          if (m.type === "atc"){
+            if (entry.num === 0){
+              state.dartsInTurn += 1;
+              if (state.dartsInTurn >= 3) endTurn();
+              continue;
             }
+            const target = getATCTargetForPlayer(p.id);
+            const hit = (target === 25) ? (entry.num === 25) : (entry.num === target);
+
+            if (hit){
+              entry.hitFlag = true;
+              state.atcTargetIndex[p.id] = (state.atcTargetIndex[p.id] ?? 0) + 1;
+              if ((state.atcTargetIndex[p.id] ?? 0) >= 21){
+                p.legs = (p.legs || 0) + 1;
+                startLegFresh();
+                return;
+              }
+            }
+
+            state.dartsInTurn += 1;
+            if (state.dartsInTurn >= 3) endTurn();
+            continue;
           }
 
-          state.dartsInTurn += 1;
-          if (state.dartsInTurn >= 3) endTurn();
-          continue;
+          // Shanghai
+          if (m.type === "shanghai"){
+            if (!state.turnSnapshot || typeof state.turnSnapshot.s !== "boolean"){
+              state.turnSnapshot = snapshotTurnForCurrentPlayer();
+            }
+
+            const round = state.shanghaiRound;
+
+            if (entry.num === 0){
+              state.dartsInTurn += 1;
+              if (state.dartsInTurn >= 3) endTurn();
+              continue;
+            }
+
+            if (entry.num === round){
+              entry.hitFlag = true;
+              state.shanghaiPoints[p.id] = (state.shanghaiPoints[p.id] ?? 0) + entry.score;
+
+              if (entry.mult === 1) state.turnSnapshot.s = true;
+              if (entry.mult === 2) state.turnSnapshot.d = true;
+              if (entry.mult === 3) state.turnSnapshot.t = true;
+
+              if (state.turnSnapshot.s && state.turnSnapshot.d && state.turnSnapshot.t){
+                startLegFresh();
+                return;
+              }
+            }
+
+            state.dartsInTurn += 1;
+            if (state.dartsInTurn >= 3) endTurn();
+            continue;
+          }
         }
+      } finally {
+        suppressHatzToast = prevSuppress;
       }
     }
 
@@ -1689,18 +1746,35 @@
     function renderCheckoutBox(){
       const m = getMode();
 
+      // Basis-UI
+      const baseEmpty = `
+        <div class="checkout-head">
+          <span>Checkout</span>
+          <span class="checkout-badge">Info</span>
+        </div>
+        <div class="checkout-main">–</div>
+        <div class="checkout-meta">
+          <span>Empfehlung: –</span>
+          <span>Alternativen: –</span>
+          <span>Rest: –</span>
+        </div>`;
+
       if (!state.players.length){
-        checkoutBox.innerHTML = `
-          <div><strong>Aktiver Spieler:</strong> –</div>
-          <div><strong>Info:</strong> –</div>
-        `;
+        checkoutBox.innerHTML = baseEmpty;
         return;
       }
 
       if (!state.running){
         checkoutBox.innerHTML = `
-          <div><strong>Aktiver Spieler:</strong> –</div>
-          <div class="muted">Drücke „Spiel starten“.</div>
+          <div class="checkout-head">
+            <span>Checkout</span>
+            <span class="checkout-badge">Paused</span>
+          </div>
+          <div class="checkout-main">Drücke „Spiel starten“</div>
+          <div class="checkout-meta">
+            <span>Aktiver Spieler: –</span>
+            <span>Rest: –</span>
+          </div>
         `;
         return;
       }
@@ -1709,11 +1783,22 @@
 
       if (m.type === "x01"){
         const dartsLeft = Math.max(0, 3 - state.dartsInTurn);
+        const suggestion = suggestCheckout(p.score);
+        const hasCheckout = p.score <= 170 && suggestion !== "Kein Checkout möglich";
         checkoutBox.innerHTML = `
-          <div><strong>Aktiver Spieler:</strong> ${p.name}</div>
-          <div><strong>Rest:</strong> ${p.score}</div>
-          <div><strong>Empfehlung:</strong> ${suggestCheckout(p.score)}</div>
-          <div><strong>Darts übrig (Aufnahme):</strong> ${dartsLeft}</div>
+          <div class="checkout-head">
+            <span>Checkout</span>
+            <span class="checkout-badge">${hasCheckout ? "Empfehlung" : "Hinweis"}</span>
+          </div>
+          <div class="checkout-main">
+            ${hasCheckout ? suggestion : "Kein Checkout sinnvoll – erst unter 170"}
+          </div>
+          <div class="checkout-meta">
+            <span>Aktiver Spieler: ${p.name}</span>
+            <span>Darts übrig: ${dartsLeft}</span>
+            <span>Rest: ${p.score}</span>
+            <span>Alternativen: ${hasCheckout ? "klassische Wege (T20/T19)" : "–"}</span>
+          </div>
         `;
         return;
       }
@@ -1721,9 +1806,16 @@
       if (m.type === "atc"){
         const t = getATCTargetForPlayer(p.id);
         checkoutBox.innerHTML = `
-          <div><strong>Aktiver Spieler:</strong> ${p.name}</div>
-          <div><strong>Ziel:</strong> ${t === 25 ? "Bull" : t}</div>
-          <div class="muted">Treffe die Zahl in Reihenfolge. Bull zählt mit 25 oder 50.</div>
+          <div class="checkout-head">
+            <span>Aktuelles Ziel</span>
+            <span class="checkout-badge">ATC</span>
+          </div>
+          <div class="checkout-main">${t === 25 ? "Bull" : t}</div>
+          <div class="checkout-meta">
+            <span>Aktiver Spieler: ${p.name}</span>
+            <span>Rest: –</span>
+            <span>Hinweis: Triff die Zahlen in Reihenfolge.</span>
+          </div>
         `;
         return;
       }
@@ -1731,10 +1823,16 @@
       // shanghai
       const pts = state.shanghaiPoints[p.id] ?? 0;
       checkoutBox.innerHTML = `
-        <div><strong>Aktiver Spieler:</strong> ${p.name}</div>
-        <div><strong>Runde:</strong> ${state.shanghaiRound} / 20</div>
-        <div><strong>Punkte:</strong> ${pts}</div>
-        <div class="muted">Punkte nur, wenn du die Rundenzahl triffst. Shanghai (S+D+T in einer Aufnahme) = Sofort-Sieg.</div>
+        <div class="checkout-head">
+          <span>Shanghai</span>
+          <span class="checkout-badge">Runde ${state.shanghaiRound}/20</span>
+        </div>
+        <div class="checkout-main">${pts} Punkte</div>
+        <div class="checkout-meta">
+          <span>Aktiver Spieler: ${p.name}</span>
+          <span>Rest: –</span>
+          <span>Hinweis: S+D+T in einer Aufnahme = Sieg.</span>
+        </div>
       `;
     }
 
@@ -1863,7 +1961,8 @@
       }
 
       const reversed = [...state.throws].reverse();
-      reversed.forEach((t, revIdx) => {
+      const list = throwLog.classList.contains("compact") ? reversed.slice(0, 5) : reversed;
+      list.forEach((t, revIdx) => {
         const originalIndex = state.throws.length - 1 - revIdx;
         const p = state.players.find(x => x.id === t.playerId);
         const who = p ? p.name : "Unbekannt";
@@ -1909,7 +2008,7 @@
         row.append(left, right);
         throwLog.appendChild(row);
 
-        if (revIdx < reversed.length - 1){
+        if (revIdx < list.length - 1){
           const hr = document.createElement("hr");
           hr.className = "throw-sep";
           throwLog.appendChild(hr);
@@ -2024,8 +2123,9 @@
     missBtn.addEventListener("click", () => addThrow(0));
 
     toggleLogBtn.addEventListener("click", () => {
-      throwLog.classList.toggle("collapsed");
-      toggleLogBtn.textContent = throwLog.classList.contains("collapsed") ? "Historie anzeigen" : "Historie verbergen";
+      const isCollapsed = throwLog.classList.toggle("collapsed");
+      if (!isCollapsed) throwLog.classList.toggle("compact");
+      toggleLogBtn.textContent = isCollapsed ? "Historie anzeigen" : "Historie verbergen";
     });
 
     clearThrowsBtn.addEventListener("click", () => {
@@ -2113,6 +2213,8 @@
     function init(){
       state.mode = gameModeSelect.value;
       renderThrowNumbers();
+      throwLog.classList.add("collapsed", "compact");
+      toggleLogBtn.textContent = "Historie anzeigen";
       renderAll();
       renderMultiplierUI();
 

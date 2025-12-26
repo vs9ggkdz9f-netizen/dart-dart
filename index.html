@@ -553,12 +553,8 @@
     // ============================================================
     // KONFIG
     // ============================================================
-    const API_BASE = (() => {
-      // Robust für LAN: immer http + Hostname/IP der aufrufenden Seite, Port 4000
-      const host = (location.hostname && location.hostname !== "") ? location.hostname : "localhost";
-      return `http://${host}:4000`;
-    })();
-    let useBackend = true; // Backend/Sockets für Mehrgeräte im LAN aktiv
+    const API_BASE = "http://13.60.249.73:4000"; // fester Backend-Host
+    let useBackend = true; // Backend/Sockets aktiv
     let backendResyncInterval = null;
     let backendMatchId = null;
     let backendPlayerMap = {}; // localId -> backendId

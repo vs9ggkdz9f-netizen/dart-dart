@@ -20,6 +20,11 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
+// Health endpoint
+app.get("/", (_req, res) => {
+  res.json({ ok: true, status: "healthy" });
+});
+
 // In-memory state
 let match = null;
 let throwsLog = []; // {id, playerId, value, mult, score, turn, dartInTurn}
@@ -85,6 +90,26 @@ app.post("/api/match/throw", (req, res) => {
   };
   throwsLog.push(entry);
   dartsInTurn += 1;
+
+  // WIN: Wenn Score 0 erreicht wurde, Leg/Set vergeben und neues Leg starten
+  if (p.score === 0){
+    p.legs = (p.legs || 0) + 1;
+    if (p.legs >= 3){
+      p.sets = (p.sets || 0) + 1;
+      // Legs aller Spieler zurücksetzen
+      match.players.forEach(pl => pl.legs = 0);
+    }
+    // neues Leg: Scores zurück auf Start, Turn-Infos reset, Wurflog leeren
+    const startScore = match.mode === "301" ? 301 : 501;
+    match.players.forEach(pl => pl.score = startScore);
+    currentTurn = 1;
+    dartsInTurn = 0;
+    match.currentIndex = 0;
+    throwsLog = [];
+    const payloadMatch = { ...match, currentTurn, dartsInTurn };
+    io.emit("match_state", { match: payloadMatch, throws: throwsLog });
+    return res.json({ entry, match: payloadMatch });
+  }
 
   // Nach 3 Darts Spieler wechseln, sonst gleicher Spieler am Zug
   if (dartsInTurn >= 3){

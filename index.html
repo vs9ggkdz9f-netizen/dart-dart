@@ -625,7 +625,9 @@
       if (!entry || !match) return;
       backendMatchId = match.id || backendMatchId;
       mapBackendPlayers(match.players || []);
-      state.currentPlayerIndex = match.currentIndex || 0;
+      state.currentPlayerIndex = match.currentIndex ?? 0;
+      state.globalTurnCounter = match.currentTurn ?? state.globalTurnCounter ?? 1;
+      state.dartsInTurn = match.dartsInTurn ?? 0;
       state.running = true;
       state.legEnded = false;
 
@@ -651,6 +653,7 @@
       state.players.forEach(pl => ensureStats(pl.id));
       state.throws.forEach(t => accumulateStats(t.playerId, t.mult, t.score));
 
+      state.turnSnapshot = snapshotTurnForCurrentPlayer();
       renderAll();
       saveLocalState();
     }
@@ -661,13 +664,15 @@
       if (!match) return;
       backendMatchId = match.id || backendMatchId;
       mapBackendPlayers(match.players || []);
-      state.currentPlayerIndex = match.currentIndex || 0;
+      state.currentPlayerIndex = match.currentIndex ?? 0;
+      state.globalTurnCounter = match.currentTurn ?? state.globalTurnCounter ?? 1;
+      state.dartsInTurn = match.dartsInTurn ?? 0;
       state.running = true;
       state.legEnded = false;
 
       const backendThrows = payload.throws || [];
       state.throws = backendThrows.map((e, idx) => {
-        const dartInTurn = (() => {
+        const dartInTurn = e.dartInTurn ?? (() => {
           const before = backendThrows.slice(0, idx).filter(t => t.turn === e.turn && t.playerId === e.playerId).length;
           return before + 1;
         })();
@@ -694,8 +699,7 @@
       state.players.forEach(pl => ensureStats(pl.id));
       state.throws.forEach(t => accumulateStats(t.playerId, t.mult, t.score));
 
-      // dartsInTurn abschätzen (vereinfachend 0)
-      state.dartsInTurn = 0;
+      state.turnSnapshot = snapshotTurnForCurrentPlayer();
 
       renderAll();
       saveLocalState();

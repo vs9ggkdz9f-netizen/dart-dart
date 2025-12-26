@@ -22,7 +22,9 @@ app.use(express.json());
 
 // In-memory state
 let match = null;
-let throwsLog = []; // {id, playerId, value, mult, score, turn}
+let throwsLog = []; // {id, playerId, value, mult, score, turn, dartInTurn}
+let currentTurn = 1;
+let dartsInTurn = 0; // 0-2 innerhalb einer Aufnahme
 
 // Helpers
 const createId = () => Math.random().toString(16).slice(2);
@@ -47,15 +49,19 @@ app.post("/api/match", (req, res) => {
       sets: 0,
     })),
     currentIndex: 0,
+    currentTurn,
+    dartsInTurn,
   };
   throwsLog = [];
+  currentTurn = 1;
+  dartsInTurn = 0;
   io.emit("match_created", match);
   res.json(match);
 });
 
 app.get("/api/match", (_req, res) => {
   if (!match) return res.status(404).json({ error: "no match" });
-  res.json({ match, throws: throwsLog });
+  res.json({ match: { ...match, currentTurn, dartsInTurn }, throws: throwsLog });
 });
 
 app.post("/api/match/throw", (req, res) => {
@@ -74,18 +80,28 @@ app.post("/api/match/throw", (req, res) => {
     value,
     mult,
     score,
-    turn: throwsLog.length + 1,
+    turn: currentTurn,
+    dartInTurn: dartsInTurn + 1,
   };
   throwsLog.push(entry);
-  match.currentIndex = (match.currentIndex + 1) % match.players.length;
-  io.emit("throw_added", { entry, match });
-  res.json({ entry, match });
+  dartsInTurn += 1;
+
+  // Nach 3 Darts Spieler wechseln, sonst gleicher Spieler am Zug
+  if (dartsInTurn >= 3){
+    dartsInTurn = 0;
+    currentTurn += 1;
+    match.currentIndex = (match.currentIndex + 1) % match.players.length;
+  }
+
+  const payloadMatch = { ...match, currentTurn, dartsInTurn };
+  io.emit("throw_added", { entry, match: payloadMatch });
+  res.json({ entry, match: payloadMatch });
 });
 
 // WebSocket
 io.on("connection", (socket) => {
   console.log("client connected");
-  if (match) socket.emit("match_state", { match, throws: throwsLog });
+  if (match) socket.emit("match_state", { match: { ...match, currentTurn, dartsInTurn }, throws: throwsLog });
   socket.on("disconnect", () => console.log("client disconnected"));
 });
 
